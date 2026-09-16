@@ -1,0 +1,19 @@
+import { getDashboardStats } from "../services/dashboardService.js";
+
+export const dashboardStats = async (req, res) => {
+  try {
+    const stats = await getDashboardStats(req.user.id);
+
+    return res.status(200).json({
+      success: true,
+      stats,
+    });
+  } catch (error) {
+    console.error("Dashboard Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error.",
+    });
+  }
+};
