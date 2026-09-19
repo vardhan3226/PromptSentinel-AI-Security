@@ -3,6 +3,8 @@ import {
   getScanHistory,
 } from "../services/scanService.js";
 
+import testAttackRobustness from "../services/robustnessTestService.js";
+
 export const scanPrompt = async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -55,6 +57,40 @@ export const scanHistory = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
+    });
+  }
+};
+
+export const scanRobustness = async (
+  req,
+  res
+) => {
+  try {
+    const { prompt } = req.body;
+
+    if (!prompt || prompt.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        message: "Prompt is required.",
+      });
+    }
+
+    const result =
+      testAttackRobustness(prompt);
+
+    return res.status(200).json({
+      success: true,
+      robustness: result,
+    });
+  } catch (error) {
+    console.error(
+      "Robustness Test Error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Robustness test failed.",
     });
   }
 };

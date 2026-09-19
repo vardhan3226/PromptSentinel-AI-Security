@@ -1,119 +1,63 @@
 import prisma from "../lib/prisma.js";
-
 import preprocessPrompt from "./promptPreprocessor.js";
-
+import {
+  detectPIIAndSecrets,
+  maskSensitiveData,
+} from "./piiSecretDetector.js";
 import { detectAttack } from "./detectionEngine.js";
-
 import { calculateRisk } from "./riskCalculator.js";
-
 import { calculateConfidence } from "./confidenceCalculator.js";
-
 import { generateRecommendation } from "./recommendationEngine.js";
-
 import {
   analyzeWithGroq,
 } from "./groqService.js";
-
-/*
-|--------------------------------------------------------------------------
-| Threat Priority
-|--------------------------------------------------------------------------
-*/
+import {
+  analyzeSemanticSimilarity,
+} from "./semanticSimilarityService.js";
+import analyzeDetectionConsistency from "./consistencyReviewService.js";
 
 const threatPriority = {
   SAFE: 0,
-
   LOW: 1,
-
   MEDIUM: 2,
-
   HIGH: 3,
-
   CRITICAL: 4,
 };
 
-/*
-|--------------------------------------------------------------------------
-| Valid Threat Levels
-|--------------------------------------------------------------------------
-*/
-
 const VALID_THREAT_LEVELS = [
   "SAFE",
-
   "LOW",
-
   "MEDIUM",
-
   "HIGH",
-
   "CRITICAL",
 ];
 
-/*
-|--------------------------------------------------------------------------
-| Normalize Threat Level
-|--------------------------------------------------------------------------
-*/
-
-function normalizeThreatLevel(
-  level
-) {
-  if (
-    typeof level !== "string"
-  ) {
+function normalizeThreatLevel(level) {
+  if (typeof level !== "string") {
     return "SAFE";
   }
 
-  const normalized =
-    level
-      .trim()
-      .toUpperCase();
+  const normalized = level.trim().toUpperCase();
 
-  return VALID_THREAT_LEVELS.includes(
-    normalized
-  )
+  return VALID_THREAT_LEVELS.includes(normalized)
     ? normalized
     : "SAFE";
 }
 
-/*
-|--------------------------------------------------------------------------
-| Normalize Score
-|--------------------------------------------------------------------------
-*/
+function normalizeScore(value, fallback = 0) {
+  const number = Number(value);
 
-function normalizeScore(
-  value,
-  fallback = 0
-) {
-  const number =
-    Number(value);
-
-  if (
-    !Number.isFinite(number)
-  ) {
+  if (!Number.isFinite(number)) {
     return fallback;
   }
 
   return Math.max(
     0,
-    Math.min(
-      100,
-      Math.round(number)
-    )
+    Math.min(100, Math.round(number))
   );
 }
 
-/*
-|--------------------------------------------------------------------------
-| Get Threat Level From Risk Score
-|--------------------------------------------------------------------------
-*/
-
-function getThreatLevelFromScore(
-  score
-) {
+function getThreatLevelFromScore(score) {
   if (score >= 90) {
     return "CRITICAL";
   }
@@ -133,17 +77,8 @@ function getThreatLevelFromScore(
   return "SAFE";
 }
 
-/*
-|--------------------------------------------------------------------------
-| Get Minimum Score For Threat Level
-|--------------------------------------------------------------------------
-*/
-
-function getMinimumScoreForThreat(
-  threatLevel
-) {
+function getMinimumScoreForThreat(threatLevel) {
   switch (threatLevel) {
-
     case "CRITICAL":
       return 90;
 
@@ -162,872 +97,779 @@ function getMinimumScoreForThreat(
   }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Get Security Action
-|--------------------------------------------------------------------------
-*/
-
-function getSecurityAction(
-  threatLevel
-) {
+function getSecurityAction(threatLevel) {
   switch (threatLevel) {
-
     case "SAFE":
-
       return {
         action: "ALLOW",
-
-        message:
-          "Prompt appears safe.",
+        message: "Prompt appears safe.",
       };
 
-
     case "LOW":
-
       return {
         action: "MONITOR",
-
         message:
           "Minor suspicious indicators detected.",
       };
 
-
     case "MEDIUM":
-
       return {
         action: "WARNING",
-
         message:
           "Suspicious prompt detected. Review recommended.",
       };
 
-
     case "HIGH":
-
       return {
         action: "BLOCK",
-
-        message:
-          "High-risk prompt detected.",
+        message: "High-risk prompt detected.",
       };
-
 
     case "CRITICAL":
-
       return {
-        action:
-          "BLOCK_AND_ALERT",
-
-        message:
-          "Critical security threat detected.",
+        action: "BLOCK_AND_ALERT",
+        message: "Critical security threat detected.",
       };
 
-
     default:
-
       return {
         action: "REVIEW",
-
-        message:
-          "Manual security review required.",
+        message: "Manual security review required.",
       };
   }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Normalize Attack Types
-|--------------------------------------------------------------------------
-*/
-
-function normalizeAttackTypes(
-  attackType
-) {
-  if (
-    typeof attackType !== "string"
-  ) {
+function normalizeAttackTypes(attackType) {
+  if (typeof attackType !== "string") {
     return [];
   }
 
-  if (
-    attackType.trim() ===
-    "Safe Prompt"
-  ) {
+  if (attackType.trim() === "Safe Prompt") {
     return [];
   }
 
   return attackType
     .split(",")
-    .map(
-      (item) =>
-        item.trim()
-    )
+    .map((item) => item.trim())
     .filter(Boolean);
 }
 
-/*
-|--------------------------------------------------------------------------
-| Combine Unique Values
-|--------------------------------------------------------------------------
-*/
-
-function combineUnique(
-  ...arrays
-) {
+function combineUnique(...arrays) {
   return [
     ...new Set(
       arrays
         .flat()
-        .filter(
-          Boolean
-        )
-        .map(
-          (item) =>
-            typeof item ===
-            "string"
-              ? item.trim()
-              : item
+        .filter(Boolean)
+        .map((item) =>
+          typeof item === "string"
+            ? item.trim()
+            : item
         )
         .filter(Boolean)
     ),
   ];
 }
 
-/*
-|--------------------------------------------------------------------------
-| RESULT FUSION ENGINE
-|--------------------------------------------------------------------------
-*/
-
-function fuseResults(
-  localResult,
-  aiResult
-) {
-
-  /*
-  ------------------------------------------------------------------------
-  | AI UNAVAILABLE
-  ------------------------------------------------------------------------
-  */
-
+function fuseResults(localResult, aiResult) {
   if (!aiResult) {
-
-    const threatLevel =
-      normalizeThreatLevel(
-        localResult.threatLevel
-      );
-
-    const riskScore =
-      normalizeScore(
-        localResult.riskScore
-      );
-
-    return {
-
-      threatLevel,
-
-      riskScore,
-
-      confidence:
-        normalizeScore(
-          localResult.confidence
-        ),
-
-      engineUsed:
-        "LOCAL_ENGINE",
-
-      enginesAgree:
-        null,
-
-      aiInfluenced:
-        false,
-    };
-  }
-
-  /*
-  ------------------------------------------------------------------------
-  | Normalize AI
-  ------------------------------------------------------------------------
-  */
-
-  const localThreat =
-    normalizeThreatLevel(
+    const threatLevel = normalizeThreatLevel(
       localResult.threatLevel
     );
 
-  const aiThreat =
-    normalizeThreatLevel(
-      aiResult.threatLevel
-    );
-
-  const localRisk =
-    normalizeScore(
+    const riskScore = normalizeScore(
       localResult.riskScore
     );
 
-  const aiRisk =
-    normalizeScore(
-      aiResult.riskScore
-    );
+    return {
+      threatLevel,
+      riskScore,
+      confidence: normalizeScore(
+        localResult.confidence
+      ),
+      engineUsed: "LOCAL_ENGINE",
+      enginesAgree: null,
+      aiInfluenced: false,
+    };
+  }
 
-  const localConfidence =
-    normalizeScore(
-      localResult.confidence
-    );
+  const localThreat = normalizeThreatLevel(
+    localResult.threatLevel
+  );
 
-  const aiConfidence =
-    normalizeScore(
-      aiResult.confidence
-    );
+  const aiThreat = normalizeThreatLevel(
+    aiResult.threatLevel
+  );
 
-  /*
-  ------------------------------------------------------------------------
-  | Engine Agreement
-  ------------------------------------------------------------------------
-  */
+  const localRisk = normalizeScore(
+    localResult.riskScore
+  );
+
+  const aiRisk = normalizeScore(
+    aiResult.riskScore
+  );
+
+  const localConfidence = normalizeScore(
+    localResult.confidence
+  );
+
+  const aiConfidence = normalizeScore(
+    aiResult.confidence
+  );
 
   const enginesAgree =
     localThreat === aiThreat;
 
-  /*
-  ------------------------------------------------------------------------
-  | Weighted Risk Score
-  |
-  | Local engine = 60%
-  | Groq AI = 40%
-  |
-  | Local remains primary.
-  ------------------------------------------------------------------------
-  */
-
-  let fusedRiskScore =
-    Math.round(
-      (
-        localRisk * 0.6
-      ) +
-      (
-        aiRisk * 0.4
-      )
-    );
-
-  /*
-  ------------------------------------------------------------------------
-  | Strongest Threat
-  ------------------------------------------------------------------------
-  */
+  let fusedRiskScore = Math.round(
+    localRisk * 0.6 +
+    aiRisk * 0.4
+  );
 
   const strongestThreat =
-    threatPriority[
-      aiThreat
-    ] >
-    threatPriority[
-      localThreat
-    ]
+    threatPriority[aiThreat] >
+    threatPriority[localThreat]
       ? aiThreat
       : localThreat;
-
-  /*
-  ------------------------------------------------------------------------
-  | Keep Risk Score Consistent With Threat
-  ------------------------------------------------------------------------
-  */
 
   const minimumScore =
     getMinimumScoreForThreat(
       strongestThreat
     );
 
-  fusedRiskScore =
-    Math.max(
-      fusedRiskScore,
-      minimumScore
-    );
+  fusedRiskScore = Math.max(
+    fusedRiskScore,
+    minimumScore
+  );
 
-  fusedRiskScore =
-    Math.min(
-      100,
-      fusedRiskScore
-    );
-
-  /*
-  ------------------------------------------------------------------------
-  | Final Threat From Score
-  ------------------------------------------------------------------------
-  */
+  fusedRiskScore = Math.min(
+    100,
+    fusedRiskScore
+  );
 
   let finalThreatLevel =
     getThreatLevelFromScore(
       fusedRiskScore
     );
 
-  /*
-  ------------------------------------------------------------------------
-  | Never reduce below strongest detected threat
-  ------------------------------------------------------------------------
-  */
-
   if (
-    threatPriority[
-      strongestThreat
-    ] >
-    threatPriority[
-      finalThreatLevel
-    ]
+    threatPriority[strongestThreat] >
+    threatPriority[finalThreatLevel]
   ) {
-    finalThreatLevel =
-      strongestThreat;
+    finalThreatLevel = strongestThreat;
 
-    fusedRiskScore =
-      Math.max(
-        fusedRiskScore,
-        getMinimumScoreForThreat(
-          strongestThreat
-        )
-      );
+    fusedRiskScore = Math.max(
+      fusedRiskScore,
+      getMinimumScoreForThreat(
+        strongestThreat
+      )
+    );
   }
-
-  /*
-  ------------------------------------------------------------------------
-  | Confidence Fusion
-  ------------------------------------------------------------------------
-  */
 
   let finalConfidence;
 
   if (enginesAgree) {
-
-    finalConfidence =
-      Math.min(
-        98,
-        Math.round(
-          (
-            localConfidence +
-            aiConfidence
-          ) / 2
-        ) + 5
-      );
-
+    finalConfidence = Math.min(
+      98,
+      Math.round(
+        (
+          localConfidence +
+          aiConfidence
+        ) / 2
+      ) + 5
+    );
   } else {
-
-    /*
-    ----------------------------------------------------------------------
-    | Disagreement reduces confidence
-    ----------------------------------------------------------------------
-    */
-
-    finalConfidence =
-      Math.min(
-        95,
-        Math.round(
-          (
-            localConfidence +
-            aiConfidence
-          ) / 2
-        )
-      );
+    finalConfidence = Math.min(
+      95,
+      Math.round(
+        (
+          localConfidence +
+          aiConfidence
+        ) / 2
+      )
+    );
   }
 
   return {
-
-    threatLevel:
-      finalThreatLevel,
-
-    riskScore:
-      fusedRiskScore,
-
-    confidence:
-      finalConfidence,
-
+    threatLevel: finalThreatLevel,
+    riskScore: fusedRiskScore,
+    confidence: finalConfidence,
     engineUsed:
       "LOCAL_ENGINE + GROQ_AI",
-
     enginesAgree,
-
-    aiInfluenced:
-      true,
+    aiInfluenced: true,
   };
 }
 
-/*
-|--------------------------------------------------------------------------
-| MAIN PROMPT ANALYSIS
-|--------------------------------------------------------------------------
-*/
+function buildEvidence({
+  localResult,
+  aiResult,
+  aiKeywords,
+  semanticSimilarity,
+  piiSecretAnalysis,
+  detectedAttacks,
+}) {
+  const localPatterns =
+    Array.isArray(
+      localResult.matchedPatterns
+    )
+      ? localResult.matchedPatterns
+      : [];
 
-export const analyzePrompt =
-  async (
-    prompt,
-    userId
-  ) => {
-
-    const workflow = [];
-
-    /*
-    ------------------------------------------------------------------------
-    | STEP 1
-    | Validate Prompt
-    ------------------------------------------------------------------------
-    */
-
-    if (
-      !prompt ||
-      typeof prompt !==
-        "string" ||
-      !prompt.trim()
-    ) {
-      throw new Error(
-        "Valid prompt is required."
-      );
-    }
-
-    workflow.push({
-      step: 1,
-
-      name:
-        "Input Validation",
-
-      status:
-        "COMPLETED",
-
-      description:
-        "Prompt validated successfully.",
-    });
-
-    /*
-    ------------------------------------------------------------------------
-    | STEP 2
-    | Preprocess Prompt
-    ------------------------------------------------------------------------
-    */
-
-    const preprocessed =
-      preprocessPrompt(
-        prompt
-      );
-
-    workflow.push({
-      step: 2,
-
-      name:
-        "Prompt Preprocessing",
-
-      status:
-        "COMPLETED",
-
-      description:
-        "Prompt features and indicators extracted.",
-    });
-
-    /*
-    ------------------------------------------------------------------------
-    | STEP 3
-    | Local Detection
-    ------------------------------------------------------------------------
-    */
-
-    const detection =
-      detectAttack(
-        preprocessed
-      );
-
-    const localRiskScore =
-      normalizeScore(
-        calculateRisk(
-          detection.threatLevel,
-          detection.matchedPatterns
+  const semanticMatches =
+    Array.isArray(
+      semanticSimilarity.matches
+    )
+      ? semanticSimilarity.matches.map(
+          (match) => ({
+            attackType:
+              match.attackType,
+            pattern:
+              match.pattern,
+            similarityScore:
+              match.similarityScore,
+          })
         )
-      );
+      : [];
 
-    const localConfidence =
-      normalizeScore(
-        calculateConfidence(
-          detection.threatLevel,
-          detection.matchedPatterns
+  const piiFindings =
+    Array.isArray(
+      piiSecretAnalysis.findings
+    )
+      ? piiSecretAnalysis.findings.map(
+          (finding) => ({
+            type: finding.type,
+            category: finding.category,
+          })
         )
-      );
+      : [];
 
-    const localResult = {
+  const sources = [];
 
-      engine:
-        "LOCAL_DETECTION_ENGINE",
+  if (localPatterns.length > 0) {
+    sources.push("Local Detection Engine");
+  }
 
-      threatLevel:
-        normalizeThreatLevel(
-          detection.threatLevel
+  if (semanticMatches.length > 0) {
+    sources.push("Semantic Similarity");
+  }
+
+  if (aiKeywords.length > 0) {
+    sources.push("Groq AI Analysis");
+  }
+
+  if (piiFindings.length > 0) {
+    sources.push("PII & Secret Detection");
+  }
+
+  const reasons = [];
+
+  if (localPatterns.length > 0) {
+    reasons.push(
+      `${localPatterns.length} local security pattern(s) matched`
+    );
+  }
+
+  if (semanticMatches.length > 0) {
+    reasons.push(
+      `semantic similarity detected with a highest similarity of ${semanticSimilarity.similarityScore}%`
+    );
+  }
+
+  if (aiKeywords.length > 0) {
+    reasons.push(
+      `${aiKeywords.length} AI security indicator(s) identified`
+    );
+  }
+
+  if (piiFindings.length > 0) {
+    reasons.push(
+      `${piiFindings.length} sensitive information finding(s) detected`
+    );
+  }
+
+  if (
+    reasons.length === 0 &&
+    detectedAttacks.length === 0
+  ) {
+    reasons.push(
+      "No suspicious security evidence detected"
+    );
+  }
+
+  return {
+    detected:
+      reasons.length > 0 &&
+      (
+        localPatterns.length > 0 ||
+        semanticMatches.length > 0 ||
+        aiKeywords.length > 0 ||
+        piiFindings.length > 0 ||
+        detectedAttacks.length > 0
+      ),
+
+    attackTypes:
+      detectedAttacks,
+
+    sources,
+
+    localPatterns,
+
+    semanticMatches,
+
+    semanticSimilarityScore:
+      semanticSimilarity.similarityScore,
+
+    aiKeywords,
+
+    piiFindings,
+
+    explanation:
+      reasons.join("; "),
+
+    summary:
+      reasons.join("; "),
+  };
+}
+
+export const analyzePrompt = async (
+  prompt,
+  userId
+) => {
+  const workflow = [];
+
+  if (
+    !prompt ||
+    typeof prompt !== "string" ||
+    !prompt.trim()
+  ) {
+    throw new Error(
+      "Valid prompt is required."
+    );
+  }
+
+  workflow.push({
+    step: 1,
+    name: "Input Validation",
+    status: "COMPLETED",
+    description:
+      "Prompt validated successfully.",
+  });
+
+  const preprocessed =
+    preprocessPrompt(prompt);
+
+  workflow.push({
+    step: 2,
+    name: "Prompt Preprocessing",
+    status: "COMPLETED",
+    description:
+      "Prompt features and indicators extracted.",
+  });
+
+  const piiSecretAnalysis =
+    detectPIIAndSecrets(prompt);
+
+  workflow.push({
+    step: 3,
+    name: "PII & Secret Detection",
+    status: "COMPLETED",
+    description:
+      piiSecretAnalysis.detected
+        ? piiSecretAnalysis.summary
+        : "No PII or secret information detected.",
+    result: {
+      detected:
+        piiSecretAnalysis.detected,
+      piiDetected:
+        piiSecretAnalysis.piiDetected,
+      secretsDetected:
+        piiSecretAnalysis.secretsDetected,
+      findingTypes:
+        piiSecretAnalysis.findings.map(
+          (finding) => finding.type
         ),
+    },
+  });
 
+  const semanticSimilarity =
+    analyzeSemanticSimilarity(prompt);
+
+  workflow.push({
+    step: 4,
+    name:
+      "Semantic Similarity Detection",
+    status: "COMPLETED",
+    description:
+      semanticSimilarity.detected
+        ? semanticSimilarity.summary
+        : "No semantic similarity detected.",
+    result: {
+      detected:
+        semanticSimilarity.detected,
+      similarityScore:
+        semanticSimilarity.similarityScore,
+      matches:
+        semanticSimilarity.matches,
+    },
+  });
+
+  const detection =
+    detectAttack(preprocessed);
+
+  const localRiskScore =
+    normalizeScore(
+      calculateRisk(
+        detection.threatLevel,
+        detection.matchedPatterns
+      )
+    );
+
+  const localConfidence =
+    normalizeScore(
+      calculateConfidence(
+        detection.threatLevel,
+        detection.matchedPatterns
+      )
+    );
+
+  const localResult = {
+    engine:
+      "LOCAL_DETECTION_ENGINE",
+
+    threatLevel:
+      normalizeThreatLevel(
+        detection.threatLevel
+      ),
+
+    riskScore:
+      localRiskScore,
+
+    confidence:
+      localConfidence,
+
+    attackType:
+      detection.attackType ||
+      "Safe Prompt",
+
+    matchedPatterns:
+      Array.isArray(
+        detection.matchedPatterns
+      )
+        ? detection.matchedPatterns
+        : [],
+  };
+
+  workflow.push({
+    step: 5,
+    name:
+      "Local Security Analysis",
+    status: "COMPLETED",
+    description:
+      "Rule-based security detection completed.",
+    result: {
+      threatLevel:
+        localResult.threatLevel,
       riskScore:
-        localRiskScore,
+        localResult.riskScore,
+    },
+  });
 
-      confidence:
-        localConfidence,
+  let aiResult = null;
 
-      attackType:
-        detection.attackType ||
-        "Safe Prompt",
+  try {
+    aiResult =
+      await analyzeWithGroq(prompt);
 
-      matchedPatterns:
-        Array.isArray(
-          detection.matchedPatterns
-        )
-          ? detection.matchedPatterns
-          : [],
-    };
-
-    workflow.push({
-      step: 3,
-
-      name:
-        "Local Security Analysis",
-
-      status:
-        "COMPLETED",
-
-      description:
-        "Rule-based security detection completed.",
-
-      result: {
-        threatLevel:
-          localResult.threatLevel,
-
-        riskScore:
-          localResult.riskScore,
-      },
-    });
-
-    /*
-    ------------------------------------------------------------------------
-    | STEP 4
-    | AI ANALYSIS
-    ------------------------------------------------------------------------
-    */
-
-    let aiResult = null;
-
-    try {
-
-      aiResult =
-        await analyzeWithGroq(
-          prompt
-        );
-
-      if (aiResult) {
-
-        workflow.push({
-          step: 4,
-
-          name:
-            "Groq AI Security Analysis",
-
-          status:
-            "COMPLETED",
-
-          description:
-            "Groq AI security analysis completed.",
-
-          result: {
-            threatLevel:
-              aiResult.threatLevel,
-
-            riskScore:
-              aiResult.riskScore,
-          },
-        });
-
-      } else {
-
-        workflow.push({
-          step: 4,
-
-          name:
-            "Groq AI Security Analysis",
-
-          status:
-            "FALLBACK",
-
-          description:
-            "Groq AI unavailable. Local engine remains active.",
-        });
-      }
-
-    } catch (error) {
-
-      console.error(
-        "Groq analysis failed:",
-        error.message
-      );
-
-      aiResult = null;
-
+    if (aiResult) {
       workflow.push({
-        step: 4,
-
+        step: 6,
         name:
           "Groq AI Security Analysis",
-
-        status:
-          "FALLBACK",
-
+        status: "COMPLETED",
         description:
-          "AI analysis failed. Local engine used as fallback.",
+          "Groq AI security analysis completed.",
+        result: {
+          threatLevel:
+            aiResult.threatLevel,
+          riskScore:
+            aiResult.riskScore,
+        },
+      });
+    } else {
+      workflow.push({
+        step: 6,
+        name:
+          "Groq AI Security Analysis",
+        status: "FALLBACK",
+        description:
+          "Groq AI unavailable. Local engine remains active.",
       });
     }
+  } catch (error) {
+    console.error(
+      "Groq analysis failed:",
+      error.message
+    );
 
-    /*
-    ------------------------------------------------------------------------
-    | STEP 5
-    | Result Fusion
-    ------------------------------------------------------------------------
-    */
-
-    const fusionResult =
-      fuseResults(
-        localResult,
-        aiResult
-      );
-
-    workflow.push({
-      step: 5,
-
-      name:
-        "Security Result Fusion",
-
-      status:
-        "COMPLETED",
-
-      description:
-        aiResult
-          ? "Local engine and Groq AI results combined."
-          : "Local security result used.",
-
-      result: {
-        threatLevel:
-          fusionResult.threatLevel,
-
-        riskScore:
-          fusionResult.riskScore,
-
-        enginesAgree:
-          fusionResult.enginesAgree,
-      },
-    });
-
-    /*
-    ------------------------------------------------------------------------
-    | STEP 6
-    | Combine Attack Types
-    ------------------------------------------------------------------------
-    */
-
-    const localAttackTypes =
-      normalizeAttackTypes(
-        localResult.attackType
-      );
-
-    const aiAttackTypes =
-      aiResult
-        ? normalizeAttackTypes(
-            aiResult.attackType
-          )
-        : [];
-
-    const detectedAttacks =
-      combineUnique(
-        localAttackTypes,
-        aiAttackTypes
-      );
-
-    const finalAttackType =
-      detectedAttacks.length > 0
-        ? detectedAttacks.join(
-            ", "
-          )
-        : "Safe Prompt";
-
-    /*
-    ------------------------------------------------------------------------
-    | STEP 7
-    | Combine Detection Evidence
-    ------------------------------------------------------------------------
-    */
-
-    const aiKeywords =
-      aiResult &&
-      Array.isArray(
-        aiResult.matchedKeywords
-      )
-        ? aiResult.matchedKeywords
-        : [];
-
-    const combinedMatchedPatterns =
-      combineUnique(
-        localResult.matchedPatterns,
-        aiKeywords
-      );
-
-    /*
-    ------------------------------------------------------------------------
-    | STEP 8
-    | Generate Recommendation
-    ------------------------------------------------------------------------
-    */
-
-    const localRecommendation =
-      generateRecommendation(
-        finalAttackType,
-        fusionResult.threatLevel
-      );
-
-    const aiRecommendation =
-      aiResult?.recommendation &&
-      typeof aiResult.recommendation ===
-        "string"
-        ? aiResult.recommendation.trim()
-        : null;
-
-    /*
-    ------------------------------------------------------------------------
-    | Final recommendation remains deterministic.
-    ------------------------------------------------------------------------
-    */
-
-    const recommendation =
-      localRecommendation;
-
-    /*
-    ------------------------------------------------------------------------
-    | STEP 9
-    | Detection Reason
-    ------------------------------------------------------------------------
-    */
-
-    const detectionReasons = [];
-
-    if (
-      localResult.matchedPatterns
-        .length > 0
-    ) {
-
-      detectionReasons.push(
-        `Local engine detected ${localResult.matchedPatterns.length} suspicious pattern(s).`
-      );
-    }
-
-    if (
-      aiResult?.detectionReason
-    ) {
-
-      detectionReasons.push(
-        `AI analysis: ${aiResult.detectionReason.trim()}`
-      );
-    }
-
-    const detectionReason =
-      detectionReasons.length > 0
-        ? detectionReasons.join(
-            " "
-          )
-        : "No malicious indicators were detected.";
-
-    /*
-    ------------------------------------------------------------------------
-    | STEP 10
-    | Security Action
-    ------------------------------------------------------------------------
-    */
-
-    const securityAction =
-      getSecurityAction(
-        fusionResult.threatLevel
-      );
+    aiResult = null;
 
     workflow.push({
       step: 6,
-
       name:
-        "Final Security Decision",
-
-      status:
-        "COMPLETED",
-
+        "Groq AI Security Analysis",
+      status: "FALLBACK",
       description:
-        securityAction.message,
+        "AI analysis failed. Local engine used as fallback.",
+    });
+  }
 
-      result: {
-        threatLevel:
-          fusionResult.threatLevel,
+  const fusionResult =
+    fuseResults(
+      localResult,
+      aiResult
+    );
 
-        riskScore:
-          fusionResult.riskScore,
+  workflow.push({
+    step: 7,
+    name:
+      "Security Result Fusion",
+    status: "COMPLETED",
+    description:
+      aiResult
+        ? "Local engine and Groq AI results combined."
+        : "Local security result used.",
+    result: {
+      threatLevel:
+        fusionResult.threatLevel,
+      riskScore:
+        fusionResult.riskScore,
+      enginesAgree:
+        fusionResult.enginesAgree,
+    },
+  });
 
-        action:
-          securityAction.action,
-      },
+  const localAttackTypes =
+    normalizeAttackTypes(
+      localResult.attackType
+    );
+
+  const aiAttackTypes =
+    aiResult
+      ? normalizeAttackTypes(
+          aiResult.attackType
+        )
+      : [];
+
+  const semanticAttackTypes =
+    semanticSimilarity.detected
+      ? semanticSimilarity.matches.map(
+          (match) => match.attackType
+        )
+      : [];
+
+  const detectedAttacks =
+    combineUnique(
+      localAttackTypes,
+      aiAttackTypes,
+      semanticAttackTypes
+    );
+
+  const finalAttackType =
+    detectedAttacks.length > 0
+      ? detectedAttacks.join(", ")
+      : "Safe Prompt";
+
+  workflow.push({
+    step: 8,
+    name:
+      "Combine Attack Types",
+    status: "COMPLETED",
+    description:
+      "Attack types from local, semantic, and AI analysis combined.",
+    result: {
+      detectedAttacks,
+      finalAttackType,
+    },
+  });
+
+  const aiKeywords =
+    aiResult &&
+    Array.isArray(
+      aiResult.matchedKeywords
+    )
+      ? aiResult.matchedKeywords
+      : [];
+
+  const semanticMatches =
+    semanticSimilarity.matches.map(
+      (match) =>
+        `${match.attackType}: ${match.pattern} (${match.similarityScore}% similarity)`
+    );
+
+  const combinedMatchedPatterns =
+    combineUnique(
+      localResult.matchedPatterns,
+      aiKeywords,
+      semanticMatches
+    );
+
+  const evidence =
+    buildEvidence({
+      localResult,
+      aiResult,
+      aiKeywords,
+      semanticSimilarity,
+      piiSecretAnalysis,
+      detectedAttacks,
     });
 
-    /*
-    ------------------------------------------------------------------------
-    | STEP 11
-    | Save Scan
-    ------------------------------------------------------------------------
-    */
+  workflow.push({
+    step: 9,
+    name:
+      "Combine Detection Evidence",
+    status: "COMPLETED",
+    description:
+      "Local patterns, semantic matches, AI indicators, and sensitive-data findings combined into explainable evidence.",
+    result: {
+      matchedPatterns:
+        combinedMatchedPatterns,
+      evidence,
+    },
+  });
 
-    const scan =
-      await prisma.promptScan.create({
+  const localRecommendation =
+    generateRecommendation(
+      finalAttackType,
+      fusionResult.threatLevel
+    );
 
-        data: {
+  const aiRecommendation =
+    aiResult?.recommendation &&
+    typeof aiResult.recommendation ===
+      "string"
+      ? aiResult.recommendation.trim()
+      : null;
 
-          prompt,
+  const recommendation =
+    localRecommendation;
 
-          attackType:
-            finalAttackType,
+  workflow.push({
+    step: 10,
+    name:
+      "Generate Recommendation",
+    status: "COMPLETED",
+    description:
+      "Security recommendation generated.",
+    result: {
+      recommendation,
+    },
+  });
 
-          threatLevel:
-            fusionResult.threatLevel,
+  const detectionReasons = [];
 
-          confidence:
-            fusionResult.confidence,
+  if (
+    localResult.matchedPatterns
+      .length > 0
+  ) {
+    detectionReasons.push(
+      `Local engine detected ${localResult.matchedPatterns.length} suspicious pattern(s).`
+    );
+  }
 
-          riskScore:
-            fusionResult.riskScore,
+  if (
+    piiSecretAnalysis.detected
+  ) {
+    detectionReasons.push(
+      `Sensitive information analysis: ${piiSecretAnalysis.summary}.`
+    );
+  }
 
-          recommendation,
+  if (
+    semanticSimilarity.detected
+  ) {
+    detectionReasons.push(
+      `Semantic similarity analysis: ${semanticSimilarity.summary}.`
+    );
+  }
 
-          userId,
-        },
-      });
+  if (
+    aiResult?.detectionReason
+  ) {
+    detectionReasons.push(
+      `AI analysis: ${aiResult.detectionReason.trim()}`
+    );
+  }
 
-    /*
-    ------------------------------------------------------------------------
-    | RETURN COMPLETE ANALYSIS
-    ------------------------------------------------------------------------
-    */
+  const detectionReason =
+    detectionReasons.length > 0
+      ? detectionReasons.join(" ")
+      : "No malicious indicators were detected.";
 
-    return {
+  workflow.push({
+    step: 11,
+    name:
+      "Detection Reason",
+    status: "COMPLETED",
+    description:
+      detectionReason,
+  });
 
-      /*
-      ----------------------------------------------------------------------
-      | Scan Information
-      ----------------------------------------------------------------------
-      */
+  const securityAction =
+    getSecurityAction(
+      fusionResult.threatLevel
+    );
 
-      id:
-        scan.id,
+  workflow.push({
+    step: 12,
+    name:
+      "Final Security Decision",
+    status: "COMPLETED",
+    description:
+      securityAction.message,
+    result: {
+      threatLevel:
+        fusionResult.threatLevel,
+      riskScore:
+        fusionResult.riskScore,
+      action:
+        securityAction.action,
+    },
+  });
 
-      prompt:
-        scan.prompt,
+  const consistencyAnalysis =
+    analyzeDetectionConsistency({
+      localResult,
+      semanticResult:
+        semanticSimilarity,
+      aiResult,
+    });
 
-      createdAt:
-        scan.createdAt,
+  workflow.push({
+    step: 13,
+    name:
+      "Consistency & Manual Review",
+    status: "COMPLETED",
+    description:
+      consistencyAnalysis.summary,
+    result: {
+      status:
+        consistencyAnalysis.status,
+      consistencyScore:
+        consistencyAnalysis.consistencyScore,
+      consistent:
+        consistencyAnalysis.consistent,
+      sources:
+        consistencyAnalysis.sources,
+    },
+  });
 
-      /*
-      ----------------------------------------------------------------------
-      | Final Security Result
-      ----------------------------------------------------------------------
-      */
+  const maskedPrompt =
+    maskSensitiveData(prompt);
 
-      finalResult: {
+  const scan =
+    await prisma.promptScan.create({
+      data: {
+        prompt:
+          maskedPrompt,
 
         attackType:
           finalAttackType,
@@ -1035,233 +877,231 @@ export const analyzePrompt =
         threatLevel:
           fusionResult.threatLevel,
 
-        riskScore:
-          fusionResult.riskScore,
-
         confidence:
           fusionResult.confidence,
 
-        action:
-          securityAction.action,
-
-        actionMessage:
-          securityAction.message,
+        riskScore:
+          fusionResult.riskScore,
 
         recommendation,
+
+        userId,
       },
+    });
 
-      /*
-      ----------------------------------------------------------------------
-      | Backward Compatibility
-      ----------------------------------------------------------------------
-      */
+  return {
+    id: scan.id,
 
+    prompt:
+      scan.prompt,
+
+    createdAt:
+      scan.createdAt,
+
+    finalResult: {
       attackType:
         finalAttackType,
 
       threatLevel:
         fusionResult.threatLevel,
 
-      confidence:
-        fusionResult.confidence,
-
       riskScore:
         fusionResult.riskScore,
 
+      confidence:
+        fusionResult.confidence,
+
+      action:
+        securityAction.action,
+
+      actionMessage:
+        securityAction.message,
+
       recommendation,
+    },
 
-      /*
-      ----------------------------------------------------------------------
-      | Workflow
-      ----------------------------------------------------------------------
-      */
+    attackType:
+      finalAttackType,
 
-      workflow,
+    threatLevel:
+      fusionResult.threatLevel,
 
-      /*
-      ----------------------------------------------------------------------
-      | Local Analysis
-      ----------------------------------------------------------------------
-      */
+    confidence:
+      fusionResult.confidence,
 
-      localAnalysis:
-        localResult,
+    riskScore:
+      fusionResult.riskScore,
 
-      /*
-      ----------------------------------------------------------------------
-      | AI Analysis
-      ----------------------------------------------------------------------
-      */
+    recommendation,
 
-      aiAnalysis:
+    workflow,
 
-        aiResult
-          ? {
+    localAnalysis:
+      localResult,
 
-              provider:
-                "Groq",
+    aiAnalysis:
+      aiResult
+        ? {
+            provider:
+              "Groq",
 
-              available:
-                true,
+            available:
+              true,
 
-              threatLevel:
-                aiResult.threatLevel,
+            threatLevel:
+              aiResult.threatLevel,
 
-              riskScore:
-                aiResult.riskScore,
+            riskScore:
+              aiResult.riskScore,
 
-              confidence:
-                aiResult.confidence,
+            confidence:
+              aiResult.confidence,
 
-              attackType:
-                aiResult.attackType,
+            attackType:
+              aiResult.attackType,
 
-              matchedKeywords:
-                aiKeywords,
+            matchedKeywords:
+              aiKeywords,
 
-              detectionReason:
-                aiResult.detectionReason,
+            detectionReason:
+              aiResult.detectionReason,
 
-              recommendation:
-                aiRecommendation,
-            }
+            recommendation:
+              aiRecommendation,
+          }
+        : {
+            provider:
+              "Groq",
 
-          : {
+            available:
+              false,
 
-              provider:
-                "Groq",
+            status:
+              "FALLBACK",
 
-              available:
-                false,
+            message:
+              "AI analysis unavailable. Local engine used.",
+          },
 
-              status:
-                "FALLBACK",
+    fusion: {
+      engineUsed:
+        fusionResult.engineUsed,
 
-              message:
-                "AI analysis unavailable. Local engine used.",
-            },
+      enginesAgree:
+        fusionResult.enginesAgree,
 
-      /*
-      ----------------------------------------------------------------------
-      | Fusion Information
-      ----------------------------------------------------------------------
-      */
+      aiInfluenced:
+        fusionResult.aiInfluenced,
 
-      fusion: {
+      localThreatLevel:
+        localResult.threatLevel,
 
-        engineUsed:
-          fusionResult.engineUsed,
+      aiThreatLevel:
+        aiResult?.threatLevel ||
+        null,
+    },
 
-        enginesAgree:
-          fusionResult.enginesAgree,
+    matchedPatterns:
+      combinedMatchedPatterns,
 
-        aiInfluenced:
-          fusionResult.aiInfluenced,
+    matchedKeywords:
+      aiKeywords,
 
-        localThreatLevel:
-          localResult.threatLevel,
+    detectedAttacks,
 
-        aiThreatLevel:
-          aiResult?.threatLevel ||
-          null,
-      },
+    detectionReason,
 
-      /*
-      ----------------------------------------------------------------------
-      | Detection Evidence
-      ----------------------------------------------------------------------
-      */
+    localRecommendation,
 
-      matchedPatterns:
-        combinedMatchedPatterns,
+    aiRecommendation,
 
-      matchedKeywords:
-        aiKeywords,
+    evidence,
 
-      detectedAttacks,
+    consistencyAnalysis,
 
-      detectionReason,
+    piiSecretAnalysis: {
+      detected:
+        piiSecretAnalysis.detected,
 
-      /*
-      ----------------------------------------------------------------------
-      | Recommendations
-      ----------------------------------------------------------------------
-      */
+      piiDetected:
+        piiSecretAnalysis.piiDetected,
 
-      localRecommendation,
+      secretsDetected:
+        piiSecretAnalysis.secretsDetected,
 
-      aiRecommendation,
+      findings:
+        piiSecretAnalysis.findings,
 
-      /*
-      ----------------------------------------------------------------------
-      | Preprocessing Information
-      ----------------------------------------------------------------------
-      */
+      summary:
+        piiSecretAnalysis.summary,
+    },
 
-      preprocessing: {
+    semanticSimilarity: {
+      detected:
+        semanticSimilarity.detected,
 
-        characterCount:
-          preprocessed.characterCount,
+      similarityScore:
+        semanticSimilarity.similarityScore,
 
-        wordCount:
-          preprocessed.wordCount,
+      matches:
+        semanticSimilarity.matches,
 
-        lineCount:
-          preprocessed.lineCount,
+      summary:
+        semanticSimilarity.summary,
+    },
 
-        urlCount:
-          preprocessed.urlCount,
+    preprocessing: {
+      characterCount:
+        preprocessed.characterCount,
 
-        encodingIndicators:
-          preprocessed.encodingIndicators,
+      wordCount:
+        preprocessed.wordCount,
 
-        hierarchyIndicators:
-          preprocessed.hierarchyIndicators,
+      lineCount:
+        preprocessed.lineCount,
 
-        roleIndicators:
-          preprocessed.roleIndicators,
+      urlCount:
+        preprocessed.urlCount,
 
-        bypassIndicators:
-          preprocessed.bypassIndicators,
+      encodingIndicators:
+        preprocessed.encodingIndicators,
 
-        extractionIndicators:
-          preprocessed.extractionIndicators,
+      hierarchyIndicators:
+        preprocessed.hierarchyIndicators,
 
-        secretIndicators:
-          preprocessed.secretIndicators,
+      roleIndicators:
+        preprocessed.roleIndicators,
 
-        executionIndicators:
-          preprocessed.executionIndicators,
+      bypassIndicators:
+        preprocessed.bypassIndicators,
 
-        delimiterIndicators:
-          preprocessed.delimiterIndicators,
+      extractionIndicators:
+        preprocessed.extractionIndicators,
 
-        featureCount:
-          preprocessed.featureCount,
-      },
-    };
+      secretIndicators:
+        preprocessed.secretIndicators,
+
+      executionIndicators:
+        preprocessed.executionIndicators,
+
+      delimiterIndicators:
+        preprocessed.delimiterIndicators,
+
+      featureCount:
+        preprocessed.featureCount,
+    },
   };
-
-/*
-|--------------------------------------------------------------------------
-| SCAN HISTORY
-|--------------------------------------------------------------------------
-*/
+};
 
 export const getScanHistory =
-  async (
-    userId
-  ) => {
-
+  async (userId) => {
     return await prisma.promptScan.findMany({
-
       where: {
         userId,
       },
 
       orderBy: {
-        createdAt:
-          "desc",
+        createdAt: "desc",
       },
     });
   };

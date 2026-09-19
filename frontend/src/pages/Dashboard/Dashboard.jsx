@@ -27,12 +27,32 @@ const initialStats = {
   attackTypeDistribution: [],
 };
 
+const initialBenchmark = {
+  metrics: {
+    total: 0,
+    truePositive: 0,
+    trueNegative: 0,
+    falsePositive: 0,
+    falseNegative: 0,
+    accuracy: 0,
+    precision: 0,
+    recall: 0,
+    f1Score: 0,
+  },
+  results: [],
+};
+
+const initialRobustness = {
+  originalPrompt: "",
+  totalMutations: 0,
+  detectedMutations: 0,
+  missedMutations: 0,
+  detectionRate: 0,
+  results: [],
+};
+
 function Dashboard() {
   const navigate = useNavigate();
-
-  // ============================================================
-  // STATE
-  // ============================================================
 
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,25 +64,22 @@ function Dashboard() {
 
   const [history, setHistory] = useState([]);
 
-  // ============================================================
-  // TOKEN
-  // ============================================================
+  const [benchmark, setBenchmark] =
+    useState(initialBenchmark);
+
+  const [robustness, setRobustness] =
+    useState(initialRobustness);
+
+  const [robustnessLoading, setRobustnessLoading] =
+    useState(false);
 
   const token = localStorage.getItem("token");
-
-  // ============================================================
-  // AUTH CHECK
-  // ============================================================
 
   useEffect(() => {
     if (!token) {
       navigate("/login");
     }
   }, [token, navigate]);
-
-  // ============================================================
-  // FORMAT STATS
-  // ============================================================
 
   const formatStats = (rawStats) => {
     return {
@@ -100,10 +117,6 @@ function Dashboard() {
     };
   };
 
-  // ============================================================
-  // API REQUEST
-  // ============================================================
-
   const apiRequest = async (
     endpoint,
     options = {}
@@ -135,10 +148,6 @@ function Dashboard() {
       }
     );
 
-    // ==========================================================
-    // HANDLE UNAUTHORIZED
-    // ==========================================================
-
     if (
       response.status === 401 ||
       response.status === 403
@@ -152,10 +161,6 @@ function Dashboard() {
       );
     }
 
-    // ==========================================================
-    // PARSE RESPONSE
-    // ==========================================================
-
     let data;
 
     try {
@@ -166,10 +171,6 @@ function Dashboard() {
       );
     }
 
-    // ==========================================================
-    // HANDLE BACKEND ERRORS
-    // ==========================================================
-
     if (!response.ok) {
       throw new Error(
         data?.message ||
@@ -179,10 +180,6 @@ function Dashboard() {
 
     return data;
   };
-
-  // ============================================================
-  // LOAD DASHBOARD DATA
-  // ============================================================
 
   useEffect(() => {
     if (!token) {
@@ -198,14 +195,11 @@ function Dashboard() {
             `Bearer ${token}`,
         };
 
-        // ======================================================
-        // FETCH ALL DASHBOARD DATA IN PARALLEL
-        // ======================================================
-
         const [
           profileResponse,
           statsResponse,
           historyResponse,
+          benchmarkResponse,
         ] = await Promise.all([
           fetch(
             `${API_BASE_URL}/api/auth/profile`,
@@ -227,16 +221,20 @@ function Dashboard() {
               headers,
             }
           ),
-        ]);
 
-        // ======================================================
-        // HANDLE UNAUTHORIZED
-        // ======================================================
+          fetch(
+            `${API_BASE_URL}/api/dashboard/benchmark`,
+            {
+              headers,
+            }
+          ),
+        ]);
 
         const responses = [
           profileResponse,
           statsResponse,
           historyResponse,
+          benchmarkResponse,
         ];
 
         const unauthorized =
@@ -254,23 +252,17 @@ function Dashboard() {
           return;
         }
 
-        // ======================================================
-        // PARSE RESPONSES
-        // ======================================================
-
         const [
           profileData,
           statsData,
           historyData,
+          benchmarkData,
         ] = await Promise.all([
           profileResponse.json(),
           statsResponse.json(),
           historyResponse.json(),
+          benchmarkResponse.json(),
         ]);
-
-        // ======================================================
-        // UPDATE PROFILE
-        // ======================================================
 
         if (
           profileResponse.ok &&
@@ -289,10 +281,6 @@ function Dashboard() {
           });
         }
 
-        // ======================================================
-        // UPDATE STATS
-        // ======================================================
-
         if (
           statsResponse.ok &&
           statsData.success &&
@@ -302,10 +290,6 @@ function Dashboard() {
             formatStats(statsData.stats)
           );
         }
-
-        // ======================================================
-        // UPDATE HISTORY
-        // ======================================================
 
         if (
           historyResponse.ok &&
@@ -320,6 +304,15 @@ function Dashboard() {
           );
         }
 
+        if (
+          benchmarkResponse.ok &&
+          benchmarkData.success &&
+          benchmarkData.benchmark
+        ) {
+          setBenchmark(
+            benchmarkData.benchmark
+          );
+        }
       } catch (error) {
         console.error(
           "Dashboard loading error:",
@@ -329,12 +322,7 @@ function Dashboard() {
     };
 
     loadDashboard();
-
   }, [token, navigate]);
-
-  // ============================================================
-  // REFRESH STATS
-  // ============================================================
 
   const refreshStats = async () => {
     try {
@@ -350,7 +338,6 @@ function Dashboard() {
           formatStats(data.stats)
         );
       }
-
     } catch (error) {
       console.error(
         "Stats refresh error:",
@@ -358,10 +345,6 @@ function Dashboard() {
       );
     }
   };
-
-  // ============================================================
-  // REFRESH HISTORY
-  // ============================================================
 
   const refreshHistory = async () => {
     try {
@@ -378,7 +361,6 @@ function Dashboard() {
             : []
         );
       }
-
     } catch (error) {
       console.error(
         "History refresh error:",
@@ -387,16 +369,8 @@ function Dashboard() {
     }
   };
 
-  // ============================================================
-  // SCAN PROMPT
-  // ============================================================
-
   const handleScan = async () => {
     const trimmedPrompt = prompt.trim();
-
-    // ==========================================================
-    // VALIDATE PROMPT
-    // ==========================================================
 
     if (!trimmedPrompt) {
       alert(
@@ -406,10 +380,6 @@ function Dashboard() {
       return;
     }
 
-    // ==========================================================
-    // PREVENT DUPLICATE REQUESTS
-    // ==========================================================
-
     if (loading) {
       return;
     }
@@ -417,15 +387,7 @@ function Dashboard() {
     try {
       setLoading(true);
 
-      // ========================================================
-      // CLEAR PREVIOUS RESULT
-      // ========================================================
-
       setResult(null);
-
-      // ========================================================
-      // SEND PROMPT
-      // ========================================================
 
       const data = await apiRequest(
         "/api/scan",
@@ -438,38 +400,24 @@ function Dashboard() {
         }
       );
 
-      // ========================================================
-      // HANDLE SUCCESS
-      // ========================================================
-
       if (
         data.success &&
         data.result
       ) {
         setResult(data.result);
 
-        // ======================================================
-        // REFRESH REAL DASHBOARD DATA
-        // ======================================================
-
         await Promise.all([
           refreshStats(),
           refreshHistory(),
         ]);
 
-        // ======================================================
-        // CLEAR PROMPT
-        // ======================================================
-
         setPrompt("");
-
       } else {
         throw new Error(
           data?.message ||
           "Prompt scanning failed."
         );
       }
-
     } catch (error) {
       console.error(
         "Prompt scan error:",
@@ -480,15 +428,69 @@ function Dashboard() {
         error.message ||
         "Unable to scan the prompt."
       );
-
     } finally {
       setLoading(false);
     }
   };
 
-  // ============================================================
-  // LOGOUT
-  // ============================================================
+  const handleRobustnessTest = async () => {
+    const trimmedPrompt = prompt.trim();
+
+    if (!trimmedPrompt) {
+      alert(
+        "Enter a prompt before starting the robustness test."
+      );
+
+      return;
+    }
+
+    if (robustnessLoading) {
+      return;
+    }
+
+    try {
+      setRobustnessLoading(true);
+
+      setRobustness(initialRobustness);
+
+      const data = await apiRequest(
+        "/api/scan/robustness",
+        {
+          method: "POST",
+
+          body: JSON.stringify({
+            prompt: trimmedPrompt,
+          }),
+        }
+      );
+
+      if (
+        data.success &&
+        data.robustness
+      ) {
+        setRobustness(
+          data.robustness
+        );
+      } else {
+        throw new Error(
+          data?.message ||
+          "Robustness test failed."
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Robustness test error:",
+        error
+      );
+
+      alert(
+        error.message ||
+        "Unable to run robustness test."
+      );
+    } finally {
+      setRobustnessLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -503,12 +505,14 @@ function Dashboard() {
 
     setHistory([]);
 
+    setBenchmark(initialBenchmark);
+
+    setRobustness(initialRobustness);
+
+    setRobustnessLoading(false);
+
     navigate("/login");
   };
-
-  // ============================================================
-  // EXPORT DASHBOARD REPORT
-  // ============================================================
 
   const handleExportDashboard = () => {
     try {
@@ -517,7 +521,6 @@ function Dashboard() {
         stats,
         history
       );
-
     } catch (error) {
       console.error(
         "PDF generation error:",
@@ -530,14 +533,8 @@ function Dashboard() {
     }
   };
 
-  // ============================================================
-  // RENDER
-  // ============================================================
-
   return (
     <div className="flex min-h-screen bg-slate-950 text-white">
-
-      {/* SIDEBAR */}
 
       <Sidebar
         navigate={navigate}
@@ -545,14 +542,18 @@ function Dashboard() {
         active="Dashboard"
       />
 
-      {/* MAIN DASHBOARD */}
-
       <DashboardContent
         user={user}
         stats={stats}
+        benchmark={benchmark}
+        robustness={robustness}
+        robustnessLoading={robustnessLoading}
         prompt={prompt}
         setPrompt={setPrompt}
         handleScan={handleScan}
+        handleRobustnessTest={
+          handleRobustnessTest
+        }
         loading={loading}
         result={result}
         history={history}
