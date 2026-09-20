@@ -11,6 +11,7 @@ import {
   Activity,
   Sparkles,
   ScanSearch,
+  CheckCircle2,
 } from "lucide-react";
 
 import { generateSecurityReport } from "../utils/pdf/generateSecurityReport";
@@ -87,57 +88,60 @@ function ResultCard({ result }) {
     switch (result.threatLevel) {
       case "SAFE":
         return {
-          color: "text-green-400",
-          bg: "bg-green-500/10",
-          border: "border-green-500/30",
-          icon: <ShieldCheck size={58} />,
-          description: "No significant security threats were detected.",
+          color: "text-emerald-600",
+          softBg: "bg-emerald-50",
+          border: "border-emerald-200",
+          icon: <ShieldCheck size={46} />,
+          description:
+            "No significant security threats were detected.",
         };
 
       case "LOW":
         return {
-          color: "text-lime-400",
-          bg: "bg-lime-500/10",
-          border: "border-lime-500/30",
-          icon: <ShieldCheck size={58} />,
-          description: "The prompt contains minor security indicators.",
+          color: "text-lime-600",
+          softBg: "bg-lime-50",
+          border: "border-lime-200",
+          icon: <ShieldCheck size={46} />,
+          description:
+            "The prompt contains minor security indicators.",
         };
 
       case "MEDIUM":
         return {
-          color: "text-yellow-400",
-          bg: "bg-yellow-500/10",
-          border: "border-yellow-500/30",
-          icon: <AlertTriangle size={58} />,
-          description: "The prompt contains suspicious security indicators.",
+          color: "text-amber-600",
+          softBg: "bg-amber-50",
+          border: "border-amber-200",
+          icon: <AlertTriangle size={46} />,
+          description:
+            "The prompt contains suspicious security indicators.",
         };
 
       case "HIGH":
         return {
-          color: "text-orange-400",
-          bg: "bg-orange-500/10",
-          border: "border-orange-500/30",
-          icon: <ShieldAlert size={58} />,
+          color: "text-orange-600",
+          softBg: "bg-orange-50",
+          border: "border-orange-200",
+          icon: <ShieldAlert size={46} />,
           description:
             "The prompt contains strong indicators of an AI security attack.",
         };
 
       case "CRITICAL":
         return {
-          color: "text-red-500",
-          bg: "bg-red-500/10",
-          border: "border-red-500/30",
-          icon: <ShieldX size={58} />,
+          color: "text-red-600",
+          softBg: "bg-red-50",
+          border: "border-red-200",
+          icon: <ShieldX size={46} />,
           description:
             "Critical security indicators were detected. Immediate blocking is recommended.",
         };
 
       default:
         return {
-          color: "text-cyan-400",
-          bg: "bg-cyan-500/10",
-          border: "border-cyan-500/30",
-          icon: <ShieldCheck size={58} />,
+          color: "text-blue-600",
+          softBg: "bg-blue-50",
+          border: "border-blue-200",
+          icon: <ShieldCheck size={46} />,
           description: "Security analysis completed.",
         };
     }
@@ -159,7 +163,9 @@ function ResultCard({ result }) {
     ? [...new Set(result.matchedPatterns)]
     : [];
 
-  const aiDetectedKeywords = Array.isArray(result.aiDetectedKeywords)
+  const aiDetectedKeywords = Array.isArray(
+    result.aiDetectedKeywords
+  )
     ? [...new Set(result.aiDetectedKeywords)]
     : Array.isArray(result.matchedKeywords)
       ? [...new Set(result.matchedKeywords)]
@@ -181,7 +187,8 @@ function ResultCard({ result }) {
     result.prompt || result.scannedPrompt || ""
   );
 
-  const consistencyAnalysis = result.consistencyAnalysis || {};
+  const consistencyAnalysis =
+    result.consistencyAnalysis || {};
 
   const consistencyScore = Number(
     consistencyAnalysis.consistencyScore || 0
@@ -202,346 +209,478 @@ function ResultCard({ result }) {
 
   const consistencyColor =
     consistencyStatus === "CONSISTENT"
-      ? "text-green-400"
+      ? "text-emerald-600"
       : consistencyStatus === "INCONSISTENT"
-        ? "text-orange-400"
-        : "text-yellow-400";
+        ? "text-orange-600"
+        : "text-amber-600";
 
   const consistencyBg =
     consistencyStatus === "CONSISTENT"
-      ? "bg-green-500/10 border-green-500/20"
+      ? "bg-emerald-50 border-emerald-200"
       : consistencyStatus === "INCONSISTENT"
-        ? "bg-orange-500/10 border-orange-500/20"
-        : "bg-yellow-500/10 border-yellow-500/20";
+        ? "bg-orange-50 border-orange-200"
+        : "bg-amber-50 border-amber-200";
+
+  const riskBarColor =
+    riskScore >= 80
+      ? "bg-red-500"
+      : riskScore >= 50
+        ? "bg-amber-400"
+        : "bg-emerald-500";
 
   return (
-    <div
-      className={`mt-8 rounded-3xl border p-6 md:p-8 shadow-2xl ${status.bg} ${status.border}`}
-    >
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8">
-        <div className="flex items-center gap-5">
-          <div className={`${status.color} shrink-0`}>
-            {status.icon}
-          </div>
+    <section className="mt-8 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
 
-          <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-3xl md:text-4xl font-bold text-white">
-                AI Security Report
-              </h2>
+      {/* =========================================================
+          REPORT HEADER
+      ========================================================== */}
 
-              <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-full">
-                <Activity
-                  size={16}
-                  className="text-green-400"
-                />
+      <div
+        className={`border-b ${status.border} ${status.softBg} px-6 py-6 md:px-8`}
+      >
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 
-                <span className="text-green-400 text-xs md:text-sm font-semibold">
+          <div className="flex items-center gap-4">
+
+            <div
+              className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm ${status.color}`}
+            >
+              {status.icon}
+            </div>
+
+            <div>
+              <div className="flex flex-wrap items-center gap-3">
+
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
+                  AI Security Report
+                </h2>
+
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-600">
+                  <Activity size={13} />
                   AI Analysis Active
                 </span>
+
+              </div>
+
+              <div className="mt-1 flex flex-wrap items-center gap-3">
+
+                <span
+                  className={`text-lg font-bold ${status.color}`}
+                >
+                  {result.threatLevel}
+                </span>
+
+                <span className="text-sm text-slate-500">
+                  {status.description}
+                </span>
+
               </div>
             </div>
 
-            <p
-              className={`text-2xl font-bold mt-2 ${status.color}`}
-            >
-              {result.threatLevel}
-            </p>
-
-            <p className="text-slate-400 mt-1">
-              {status.description}
-            </p>
           </div>
+
+          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <CheckCircle2
+              size={18}
+              className="text-emerald-500"
+            />
+
+            <div>
+              <p className="text-xs font-semibold text-slate-800">
+                Analysis Complete
+              </p>
+
+              <p className="text-[11px] text-slate-500">
+                Multi-layer security evaluation
+              </p>
+            </div>
+          </div>
+
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-slate-900/90 border border-slate-700/50 rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Target className="text-cyan-400" size={24} />
+      {/* =========================================================
+          KEY METRICS
+      ========================================================== */}
 
-            <h3 className="font-bold text-lg text-white">
-              Attack Type
-            </h3>
+      <div className="grid gap-4 border-b border-slate-200 bg-slate-50/70 p-5 md:grid-cols-2 xl:grid-cols-4">
+
+        {/* Attack Type */}
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+
+          <div className="flex items-center gap-3">
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
+              <Target
+                size={20}
+                className="text-blue-600"
+              />
+            </div>
+
+            <div>
+              <p className="text-xs font-medium text-slate-500">
+                Attack Type
+              </p>
+
+              <p className="mt-1 text-sm font-bold text-slate-900">
+                {result.attackType || "Safe Prompt"}
+              </p>
+            </div>
+
           </div>
 
-          <p className="text-slate-300 leading-7">
-            {result.attackType || "Safe Prompt"}
-          </p>
-
           {attackTypes.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-4">
+            <div className="mt-4 flex flex-wrap gap-1.5">
               {attackTypes.map((type, index) => (
                 <span
                   key={`${type}-${index}`}
-                  className="bg-orange-500/10 border border-orange-500/20 text-orange-300 px-3 py-1.5 rounded-full text-xs font-medium"
+                  className="rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-[10px] font-semibold text-orange-600"
                 >
                   {type}
                 </span>
               ))}
             </div>
           )}
+
         </div>
 
-        <div className="bg-slate-900/90 border border-slate-700/50 rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <ShieldAlert
-                className="text-orange-400"
-                size={24}
-              />
+        {/* Risk Score */}
 
-              <h3 className="font-bold text-lg text-white">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+
+          <div className="flex items-center justify-between">
+
+            <div className="flex items-center gap-3">
+
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50">
+                <ShieldAlert
+                  size={20}
+                  className="text-orange-500"
+                />
+              </div>
+
+              <p className="text-sm font-bold text-slate-800">
                 Risk Score
-              </h3>
+              </p>
+
             </div>
 
-            <span className="text-xl font-bold text-white">
+            <span className="text-lg font-bold text-slate-900">
               {riskScore}/100
             </span>
+
           </div>
 
-          <div className="w-full bg-slate-700 rounded-full h-4 overflow-hidden">
+          <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-slate-100">
             <div
-              className={`h-4 rounded-full transition-all duration-700 ${
-                riskScore >= 80
-                  ? "bg-red-500"
-                  : riskScore >= 50
-                    ? "bg-yellow-400"
-                    : "bg-green-400"
-              }`}
+              className={`h-full rounded-full transition-all duration-700 ${riskBarColor}`}
               style={{
-                width: `${Math.min(Math.max(riskScore, 0), 100)}%`,
+                width: `${Math.min(
+                  Math.max(riskScore, 0),
+                  100
+                )}%`,
               }}
             />
           </div>
 
-          <div className="flex justify-between text-xs text-slate-500 mt-3">
+          <div className="mt-2 flex justify-between text-[10px] text-slate-400">
             <span>Low</span>
             <span>Medium</span>
             <span>High</span>
             <span>Critical</span>
           </div>
+
         </div>
 
-        <div className="bg-slate-900/90 border border-slate-700/50 rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Brain
-                className="text-cyan-400"
-                size={24}
-              />
+        {/* Confidence */}
 
-              <h3 className="font-bold text-lg text-white">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+
+          <div className="flex items-center justify-between">
+
+            <div className="flex items-center gap-3">
+
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-50">
+                <Brain
+                  size={20}
+                  className="text-cyan-600"
+                />
+              </div>
+
+              <p className="text-sm font-bold text-slate-800">
                 Detection Confidence
-              </h3>
+              </p>
+
             </div>
 
-            <span className="text-xl font-bold text-white">
+            <span className="text-lg font-bold text-slate-900">
               {confidence}%
             </span>
+
           </div>
 
-          <div className="w-full bg-slate-700 rounded-full h-4 overflow-hidden">
+          <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-slate-100">
             <div
-              className="bg-cyan-400 h-4 rounded-full transition-all duration-700"
+              className="h-full rounded-full bg-cyan-500 transition-all duration-700"
               style={{
-                width: `${Math.min(Math.max(confidence, 0), 100)}%`,
+                width: `${Math.min(
+                  Math.max(confidence, 0),
+                  100
+                )}%`,
               }}
             />
           </div>
 
-          <p className="text-xs text-slate-500 mt-3">
-            Confidence in the final security classification.
+          <p className="mt-2 text-[10px] text-slate-400">
+            Confidence in the final classification
           </p>
+
         </div>
 
-        <div className="bg-slate-900/90 border border-slate-700/50 rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <Sparkles
-              className="text-violet-400"
-              size={24}
-            />
+        {/* Detection Engine */}
 
-            <h3 className="font-bold text-lg text-white">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+
+          <div className="flex items-center gap-3">
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50">
+              <Sparkles
+                size={20}
+                className="text-violet-600"
+              />
+            </div>
+
+            <p className="text-sm font-bold text-slate-800">
               Detection Engine
-            </h3>
+            </p>
+
           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-400">
-                Local Security Engine
-              </span>
+          <div className="mt-4 space-y-2.5">
 
-              <span className="text-green-400 font-semibold">
-                Active
-              </span>
-            </div>
+            {[
+              "Local Security Engine",
+              "Threat Classification",
+              "AI Analysis",
+            ].map((engine) => (
+              <div
+                key={engine}
+                className="flex items-center justify-between"
+              >
+                <span className="text-xs text-slate-500">
+                  {engine}
+                </span>
 
-            <div className="flex items-center justify-between">
-              <span className="text-slate-400">
-                Threat Classification
-              </span>
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  Active
+                </span>
+              </div>
+            ))}
 
-              <span className="text-green-400 font-semibold">
-                Active
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-slate-400">
-                AI Analysis
-              </span>
-
-              <span className="text-green-400 font-semibold">
-                Active
-              </span>
-            </div>
           </div>
+
         </div>
 
-        <div className="bg-slate-900/90 border border-slate-700/50 rounded-2xl p-6 md:col-span-2">
-          <div className="flex items-center gap-3 mb-2">
-            <Search
-              className="text-green-400"
-              size={24}
-            />
+      </div>
+
+      {/* =========================================================
+          INDICATORS
+      ========================================================== */}
+
+      <div className="grid gap-4 border-b border-slate-200 p-5 md:grid-cols-2 md:p-6">
+
+        {/* Matched Indicators */}
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+
+          <div className="flex items-start gap-3">
+
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
+              <Search
+                size={19}
+                className="text-emerald-600"
+              />
+            </div>
 
             <div>
-              <h3 className="font-bold text-lg text-white">
+              <h3 className="font-bold text-slate-900">
                 Matched Security Indicators
               </h3>
 
-              <p className="text-sm text-slate-500">
-                Patterns and keywords identified during analysis
+              <p className="mt-1 text-xs text-slate-500">
+                Patterns identified during analysis
               </p>
             </div>
+
           </div>
 
           {matchedPatterns.length > 0 ? (
-            <div className="flex flex-wrap gap-2 mt-5">
+            <div className="mt-4 flex flex-wrap gap-2">
               {matchedPatterns.map((pattern, index) => (
                 <span
                   key={`${pattern}-${index}`}
-                  className="bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-3 py-2 rounded-full text-sm"
+                  className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700"
                 >
                   {pattern}
                 </span>
               ))}
             </div>
           ) : (
-            <p className="text-slate-400 mt-4">
+            <div className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-500">
               No suspicious security indicators detected.
-            </p>
+            </div>
           )}
+
         </div>
 
-        <div className="bg-slate-900/90 border border-slate-700/50 rounded-2xl p-6 md:col-span-2">
-          <div className="flex items-center gap-3 mb-2">
-            <Brain
-              className="text-violet-400"
-              size={24}
-            />
+        {/* AI Keywords */}
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+
+          <div className="flex items-start gap-3">
+
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50">
+              <Brain
+                size={19}
+                className="text-violet-600"
+              />
+            </div>
 
             <div>
-              <h3 className="font-bold text-lg text-white">
+              <h3 className="font-bold text-slate-900">
                 AI-Detected Keywords
               </h3>
 
-              <p className="text-sm text-slate-500">
-                Additional indicators identified by AI analysis
+              <p className="mt-1 text-xs text-slate-500">
+                Additional indicators identified by AI
               </p>
             </div>
+
           </div>
 
           {aiDetectedKeywords.length > 0 ? (
-            <div className="flex flex-wrap gap-2 mt-5">
+            <div className="mt-4 flex flex-wrap gap-2">
               {aiDetectedKeywords.map((keyword, index) => (
                 <span
                   key={`${keyword}-${index}`}
-                  className="bg-violet-500/10 border border-violet-500/20 text-violet-300 px-3 py-2 rounded-full text-sm"
+                  className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700"
                 >
                   {keyword}
                 </span>
               ))}
             </div>
           ) : (
-            <p className="text-slate-400 mt-4">
+            <div className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-500">
               No additional AI-detected keywords.
-            </p>
+            </div>
           )}
+
         </div>
 
-        <div className="bg-slate-900/90 border border-slate-700/50 rounded-2xl p-6 md:col-span-2">
-          <div className="flex items-center gap-3 mb-3">
-            <Brain
-              className="text-yellow-400"
-              size={24}
-            />
+      </div>
 
-            <h3 className="font-bold text-lg text-white">
-              Detection Reason
-            </h3>
+      {/* =========================================================
+          DETECTION REASON
+      ========================================================== */}
+
+      <div className="border-b border-slate-200 p-5 md:p-6">
+
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-5">
+
+          <div className="flex items-start gap-3">
+
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100">
+              <Brain
+                size={19}
+                className="text-amber-600"
+              />
+            </div>
+
+            <div>
+              <h3 className="font-bold text-slate-900">
+                Detection Reason
+              </h3>
+
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {detectionReason}
+              </p>
+            </div>
+
           </div>
 
-          <p className="leading-7 text-slate-300">
-            {detectionReason}
-          </p>
         </div>
 
-        {/* CONSISTENCY & MANUAL REVIEW */}
+      </div>
 
-        <div className="bg-slate-900/90 border border-slate-700/50 rounded-2xl p-6 md:col-span-2">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
-            <div className="flex items-center gap-3">
-              <ShieldCheck
-                className="text-cyan-400"
-                size={24}
-              />
+      {/* =========================================================
+          CONSISTENCY
+      ========================================================== */}
+
+      <div className="border-b border-slate-200 p-5 md:p-6">
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5">
+
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+
+            <div className="flex items-start gap-3">
+
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-50">
+                <ShieldCheck
+                  size={19}
+                  className="text-cyan-600"
+                />
+              </div>
 
               <div>
-                <h3 className="font-bold text-lg text-white">
+                <h3 className="font-bold text-slate-900">
                   Consistency & Manual Review
                 </h3>
 
-                <p className="text-sm text-slate-500">
+                <p className="mt-1 text-xs text-slate-500">
                   Cross-check of local, semantic, and AI detection results
                 </p>
               </div>
+
             </div>
 
-            <div
-              className={`px-3 py-1.5 rounded-full border text-sm font-semibold ${consistencyBg} ${consistencyColor}`}
+            <span
+              className={`w-fit rounded-full border px-3 py-1.5 text-xs font-bold ${consistencyBg} ${consistencyColor}`}
             >
               {consistencyStatus}
-            </div>
+            </span>
+
           </div>
 
-          <div className="grid md:grid-cols-2 gap-5">
-            <div className="bg-slate-950/60 border border-slate-700/50 rounded-xl p-5">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-slate-400">
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+
+              <div className="flex items-center justify-between">
+
+                <span className="text-xs text-slate-500">
                   Consistency Score
                 </span>
 
-                <span className="text-xl font-bold text-white">
+                <span className="text-lg font-bold text-slate-900">
                   {Math.min(
                     Math.max(consistencyScore, 0),
                     100
                   )}
                   %
                 </span>
+
               </div>
 
-              <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
                 <div
-                  className={`h-3 rounded-full transition-all duration-700 ${
+                  className={`h-full rounded-full ${
                     consistencyScore >= 80
-                      ? "bg-green-400"
+                      ? "bg-emerald-500"
                       : consistencyScore >= 50
-                        ? "bg-yellow-400"
-                        : "bg-orange-400"
+                        ? "bg-amber-400"
+                        : "bg-orange-500"
                   }`}
                   style={{
                     width: `${Math.min(
@@ -551,15 +690,20 @@ function ResultCard({ result }) {
                   }}
                 />
               </div>
+
             </div>
 
-            <div className="bg-slate-950/60 border border-slate-700/50 rounded-xl p-5">
-              <p className="text-slate-400 mb-2">
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+
+              <p className="text-xs text-slate-500">
                 Review Status
               </p>
 
-              <p className={`font-semibold ${consistencyColor}`}>
-                {typeof consistencyAnalysis.consistent === "boolean"
+              <p
+                className={`mt-2 text-sm font-semibold ${consistencyColor}`}
+              >
+                {typeof consistencyAnalysis.consistent ===
+                "boolean"
                   ? consistencyAnalysis.consistent
                     ? "Detection sources are consistent"
                     : "Manual review recommended"
@@ -567,21 +711,27 @@ function ResultCard({ result }) {
                     ? "Detection sources are consistent"
                     : "Manual review recommended"}
               </p>
+
             </div>
+
           </div>
 
           {consistencySources.length > 0 && (
-            <div className="mt-5">
-              <p className="text-slate-400 mb-3">
+            <div className="mt-4">
+
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Analysis Sources
               </p>
 
               <div className="flex flex-wrap gap-2">
+
                 {consistencySources.map((source, index) => {
+
                   const sourceName =
                     typeof source === "string"
                       ? source
-                      : source?.source || "Unknown Source";
+                      : source?.source ||
+                        "Unknown Source";
 
                   const classification =
                     typeof source === "object"
@@ -591,7 +741,7 @@ function ResultCard({ result }) {
                   return (
                     <span
                       key={`${sourceName}-${index}`}
-                      className="bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 px-3 py-2 rounded-full text-sm"
+                      className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700"
                     >
                       {sourceName}
                       {classification
@@ -600,104 +750,168 @@ function ResultCard({ result }) {
                     </span>
                   );
                 })}
+
               </div>
+
             </div>
           )}
 
-          <div className="mt-5 bg-slate-950/60 border border-slate-700/50 rounded-xl p-5">
-            <p className="text-slate-400 mb-2">
+          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Review Summary
             </p>
 
-            <p className="leading-7 text-slate-300">
+            <p className="mt-2 text-sm leading-6 text-slate-600">
               {consistencySummary}
             </p>
+
           </div>
+
         </div>
 
-        <div className="bg-slate-900/90 border border-slate-700/50 rounded-2xl p-6 md:col-span-2">
-          <div className="flex items-center gap-3 mb-3">
-            <Lightbulb
-              className="text-green-400"
-              size={24}
-            />
+      </div>
+
+      {/* =========================================================
+          RECOMMENDATIONS
+      ========================================================== */}
+
+      <div className="grid gap-4 border-b border-slate-200 p-5 md:grid-cols-2 md:p-6">
+
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5">
+
+          <div className="flex items-start gap-3">
+
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100">
+              <Lightbulb
+                size={19}
+                className="text-emerald-600"
+              />
+            </div>
 
             <div>
-              <h3 className="font-bold text-lg text-white">
+              <h3 className="font-bold text-slate-900">
                 Security Recommendation
               </h3>
 
-              <p className="text-sm text-slate-500">
+              <p className="mt-1 text-xs text-slate-500">
                 Final recommendation from PromptSentinel
               </p>
+
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                {recommendation}
+              </p>
             </div>
+
           </div>
 
-          <p className="leading-7 text-slate-300">
-            {recommendation}
-          </p>
         </div>
 
-        <div className="bg-slate-900/90 border border-cyan-500/10 rounded-2xl p-6 md:col-span-2">
-          <div className="flex items-center gap-3 mb-3">
-            <Sparkles
-              className="text-cyan-400"
-              size={24}
-            />
+        <div className="rounded-2xl border border-blue-200 bg-blue-50/50 p-5">
+
+          <div className="flex items-start gap-3">
+
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100">
+              <Sparkles
+                size={19}
+                className="text-blue-600"
+              />
+            </div>
 
             <div>
-              <h3 className="font-bold text-lg text-white">
+              <h3 className="font-bold text-slate-900">
                 AI Analysis Recommendation
               </h3>
 
-              <p className="text-sm text-slate-500">
-                Additional recommendation generated by AI analysis
+              <p className="mt-1 text-xs text-slate-500">
+                Additional recommendation from AI analysis
+              </p>
+
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                {aiRecommendation}
               </p>
             </div>
+
           </div>
 
-          <p className="leading-7 text-slate-300">
-            {aiRecommendation}
-          </p>
         </div>
 
-        <div className="bg-slate-950 border border-slate-700/50 rounded-2xl p-6 md:col-span-2">
-          <div className="flex items-center gap-3 mb-4">
-            <ScanSearch
-              className="text-slate-300"
-              size={24}
-            />
+      </div>
+
+      {/* =========================================================
+          SCANNED PROMPT
+      ========================================================== */}
+
+      <div className="p-5 md:p-6">
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+
+          <div className="flex items-center gap-3">
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-slate-200">
+              <ScanSearch
+                size={19}
+                className="text-slate-600"
+              />
+            </div>
 
             <div>
-              <h3 className="font-bold text-lg text-white">
+              <h3 className="font-bold text-slate-900">
                 Scanned Prompt
               </h3>
 
-              <p className="text-sm text-slate-500">
+              <p className="mt-1 text-xs text-slate-500">
                 Sensitive information is masked before display
               </p>
             </div>
+
           </div>
 
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-5">
-            <p className="text-slate-300 leading-7 whitespace-pre-wrap break-words">
+          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+
+            <p className="whitespace-pre-wrap wrap-break-word text-sm leading-6 text-slate-700">
               {scannedPrompt || "Prompt text unavailable."}
             </p>
+
           </div>
+
         </div>
+
+        {/* DOWNLOAD */}
+
+        <div className="mt-5 flex justify-end">
+
+          <button
+            onClick={() => generateSecurityReport(result)}
+            className="
+              flex
+              items-center
+              gap-2.5
+              rounded-xl
+              bg-blue-600
+              px-5
+              py-3
+              text-sm
+              font-bold
+              text-white
+              shadow-sm
+              transition-all
+              duration-200
+              hover:bg-blue-700
+              hover:-translate-y-0.5
+              hover:shadow-lg
+              hover:shadow-blue-600/20
+            "
+          >
+            <Download size={18} />
+            Download Security Report
+          </button>
+
+        </div>
+
       </div>
 
-      <div className="mt-8 flex justify-end">
-        <button
-          onClick={() => generateSecurityReport(result)}
-          className="flex items-center gap-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-4 rounded-2xl transition-all duration-200 hover:shadow-lg hover:shadow-cyan-500/20"
-        >
-          <Download size={22} />
-
-          Download Security Report
-        </button>
-      </div>
-    </div>
+    </section>
   );
 }
 

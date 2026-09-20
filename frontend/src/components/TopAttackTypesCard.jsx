@@ -1,192 +1,284 @@
 import {
   ShieldAlert,
   ShieldCheck,
-  ShieldX,
   AlertTriangle,
+  Code2,
+  KeyRound,
+  Database,
+  Terminal,
+  LockKeyhole,
+  FileWarning,
 } from "lucide-react";
 
 function TopAttackTypesCard({ history = [] }) {
-  const attacks = {};
+  const attackCounts = {};
 
   history.forEach((scan) => {
-    const attack =
-      scan.attackType ||
-      scan.attack_type ||
-      scan.threatType ||
-      "Unknown";
-
-    const normalizedAttack =
-      String(attack).trim();
-
-    // Do not include safe scans as attacks
-    const safeValues = [
-      "safe",
-      "safe prompt",
-      "none",
-      "normal",
-      "no threat",
-      "no attack",
-    ];
+    const attackType = scan?.attackType;
 
     if (
-      safeValues.includes(
-        normalizedAttack.toLowerCase()
-      )
+      !attackType ||
+      attackType.toLowerCase() === "safe prompt" ||
+      attackType.toLowerCase() === "safe"
     ) {
       return;
     }
 
-    attacks[normalizedAttack] =
-      (attacks[normalizedAttack] || 0) + 1;
+    attackCounts[attackType] =
+      (attackCounts[attackType] || 0) + 1;
   });
 
-  const sortedAttacks = Object.entries(attacks)
+  const topAttacks = Object.entries(attackCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
 
-  const getIcon = (attack) => {
-    const attackName =
-      attack.toLowerCase();
+  const getIcon = (attackType) => {
+    const type = attackType.toLowerCase();
 
     if (
-      attackName.includes("jailbreak")
+      type.includes("injection") ||
+      type.includes("jailbreak")
     ) {
-      return (
-        <ShieldX
-          className="text-red-500"
-          size={22}
-        />
-      );
+      return ShieldAlert;
     }
 
     if (
-      attackName.includes("prompt injection") ||
-      attackName.includes("injection")
+      type.includes("system") ||
+      type.includes("prompt leakage") ||
+      type.includes("extraction")
     ) {
-      return (
-        <ShieldAlert
-          className="text-orange-400"
-          size={22}
-        />
-      );
+      return LockKeyhole;
     }
 
     if (
-      attackName.includes("data") ||
-      attackName.includes("leak")
+      type.includes("secret") ||
+      type.includes("credential")
     ) {
-      return (
-        <AlertTriangle
-          className="text-yellow-400"
-          size={22}
-        />
-      );
+      return KeyRound;
     }
 
-    return (
-      <ShieldCheck
-        className="text-cyan-400"
-        size={22}
-      />
-    );
+    if (
+      type.includes("database") ||
+      type.includes("exfiltration")
+    ) {
+      return Database;
+    }
+
+    if (
+      type.includes("code") ||
+      type.includes("execution")
+    ) {
+      return Terminal;
+    }
+
+    if (
+      type.includes("obfuscation") ||
+      type.includes("encoding")
+    ) {
+      return Code2;
+    }
+
+    if (type.includes("role")) {
+      return AlertTriangle;
+    }
+
+    return FileWarning;
   };
 
+  const getIconStyle = (index) => {
+    const styles = [
+      {
+        bg: "bg-red-50",
+        text: "text-red-600",
+      },
+      {
+        bg: "bg-orange-50",
+        text: "text-orange-600",
+      },
+      {
+        bg: "bg-yellow-50",
+        text: "text-yellow-600",
+      },
+      {
+        bg: "bg-blue-50",
+        text: "text-blue-600",
+      },
+      {
+        bg: "bg-green-50",
+        text: "text-green-600",
+      },
+    ];
+
+    return styles[index] || styles[3];
+  };
+
+  const maxCount =
+    topAttacks.length > 0
+      ? topAttacks[0][1]
+      : 0;
+
   return (
-    <div className="bg-slate-900 border border-cyan-500/20 rounded-3xl p-8 shadow-lg">
+    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
-      <div className="flex justify-between items-center">
+      {/* TOP ACCENT */}
 
-        <div>
+      <div className="absolute left-0 top-0 h-1 w-full bg-blue-500" />
 
-          <h2 className="text-3xl font-bold text-white">
-            Top Attack Types
-          </h2>
+      {/* HEADER */}
 
-          <p className="text-slate-400 mt-2">
-            Most Frequently Detected Threats
-          </p>
+      <div className="flex items-start justify-between gap-4">
+
+        <div className="flex items-center gap-3">
+
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50">
+            <ShieldAlert
+              size={22}
+              className="text-blue-600"
+            />
+          </div>
+
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-slate-900">
+              Top Attack Types
+            </h2>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Most frequently detected threats
+            </p>
+          </div>
 
         </div>
 
-        <ShieldAlert
-          size={46}
-          className="text-red-400"
-        />
+        <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          Top 5
+        </span>
 
       </div>
 
-      <div className="mt-10">
+      {/* ATTACK LIST */}
 
-        {sortedAttacks.length === 0 ? (
+      {topAttacks.length > 0 ? (
+        <div className="mt-7 space-y-4">
 
-          <div className="text-center py-10 text-slate-500">
+          {topAttacks.map(
+            ([attackType, count], index) => {
+              const Icon = getIcon(attackType);
+              const iconStyle =
+                getIconStyle(index);
 
-            No attacks detected yet.
+              const percentage =
+                maxCount > 0
+                  ? Math.round(
+                      (count / maxCount) * 100
+                    )
+                  : 0;
 
+              return (
+                <div
+                  key={attackType}
+                  className="group rounded-xl border border-slate-100 bg-slate-50/70 p-3 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:shadow-sm"
+                >
+
+                  <div className="flex items-center gap-3">
+
+                    {/* RANK */}
+
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-xs font-black text-slate-400 shadow-sm">
+                      {index + 1}
+                    </div>
+
+                    {/* ICON */}
+
+                    <div
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconStyle.bg}`}
+                    >
+                      <Icon
+                        size={17}
+                        className={iconStyle.text}
+                      />
+                    </div>
+
+                    {/* CONTENT */}
+
+                    <div className="min-w-0 flex-1">
+
+                      <div className="flex items-center justify-between gap-3">
+
+                        <p className="truncate text-sm font-semibold text-slate-700">
+                          {attackType}
+                        </p>
+
+                        <span className="shrink-0 text-sm font-black text-slate-900">
+                          {count}
+                        </span>
+
+                      </div>
+
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${
+                            index === 0
+                              ? "bg-red-500"
+                              : index === 1
+                              ? "bg-orange-500"
+                              : index === 2
+                              ? "bg-yellow-500"
+                              : "bg-blue-500"
+                          }`}
+                          style={{
+                            width: `${percentage}%`,
+                          }}
+                        />
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                </div>
+              );
+            }
+          )}
+
+        </div>
+      ) : (
+        <div className="mt-7 rounded-xl border border-slate-200 bg-slate-50 p-8 text-center">
+
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-50">
+            <ShieldCheck
+              size={24}
+              className="text-green-600"
+            />
           </div>
 
-        ) : (
+          <p className="mt-3 text-sm font-semibold text-slate-700">
+            No attack types detected
+          </p>
 
-          sortedAttacks.map(
-            ([attack, count], index) => (
+          <p className="mt-1 text-xs text-slate-400">
+            Attack statistics will appear after
+            security findings are recorded.
+          </p>
 
-              <div
-                key={attack}
-                className="flex justify-between items-center bg-slate-950 rounded-2xl px-6 py-5 mb-4 border border-slate-800 hover:border-cyan-500/30 transition"
-              >
+        </div>
+      )}
 
-                <div className="flex items-center gap-4">
+      {/* FOOTER */}
 
-                  <div className="text-cyan-400 font-bold text-lg">
+      {topAttacks.length > 0 && (
+        <div className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-4">
 
-                    #{index + 1}
+          <div className="h-2 w-2 rounded-full bg-red-500" />
 
-                  </div>
+          <p className="text-[11px] text-slate-500">
+            Showing the most frequently detected
+            attack categories.
+          </p>
 
-                  {getIcon(attack)}
-
-                  <div>
-
-                    <h3 className="font-semibold text-white">
-
-                      {attack}
-
-                    </h3>
-
-                    <p className="text-slate-400 text-sm">
-
-                      AI Security Threat
-
-                    </p>
-
-                  </div>
-
-                </div>
-
-                <div className="text-right">
-
-                  <h2 className="text-3xl font-bold text-cyan-400">
-
-                    {count}
-
-                  </h2>
-
-                  <p className="text-slate-400 text-sm">
-
-                    Detection{count > 1 ? "s" : ""}
-
-                  </p>
-
-                </div>
-
-              </div>
-
-            )
-          )
-
-        )}
-
-      </div>
+        </div>
+      )}
 
     </div>
   );

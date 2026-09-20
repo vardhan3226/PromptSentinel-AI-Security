@@ -1,370 +1,218 @@
-import {
-  TrendingUp,
-  ShieldCheck,
-  ShieldAlert,
-  Activity,
-  AlertTriangle,
-} from "lucide-react";
+import { ShieldCheck, ShieldAlert, Activity } from "lucide-react";
 
 function ThreatTrendCard({ stats }) {
-  const total = stats.totalScans || 0;
+  const total = stats?.totalScans || 0;
 
-  const safe = stats.safePrompts || 0;
-  const low = stats.lowRiskPrompts || 0;
-  const medium = stats.mediumRiskPrompts || 0;
-  const high = stats.highRiskPrompts || 0;
-  const critical =
-    stats.criticalRiskPrompts || 0;
+  const safe = stats?.safePrompts || 0;
+  const low = stats?.lowRiskPrompts || 0;
+  const medium = stats?.mediumRiskPrompts || 0;
+  const high = stats?.highRiskPrompts || 0;
+  const critical = stats?.criticalRiskPrompts || 0;
+
+  const highRiskFindings = high + critical;
 
   const getPercentage = (value) => {
-    if (total === 0) {
-      return 0;
-    }
-
-    return Math.round(
-      (value / total) * 100
-    );
+    if (!total) return 0;
+    return Math.round((value / total) * 100);
   };
 
-  const safePercent =
-    getPercentage(safe);
-
-  const lowPercent =
-    getPercentage(low);
-
-  const mediumPercent =
-    getPercentage(medium);
-
-  const highPercent =
-    getPercentage(high);
-
-  const criticalPercent =
-    getPercentage(critical);
-
-  const highRiskFindings =
-    high + critical;
-
-  const highRiskPercent =
-    getPercentage(highRiskFindings);
+  const threats = [
+    {
+      name: "Safe",
+      value: safe,
+      percentage: getPercentage(safe),
+      bar: "bg-green-500",
+      bg: "bg-green-50",
+      text: "text-green-600",
+    },
+    {
+      name: "Low",
+      value: low,
+      percentage: getPercentage(low),
+      bar: "bg-blue-500",
+      bg: "bg-blue-50",
+      text: "text-blue-600",
+    },
+    {
+      name: "Medium",
+      value: medium,
+      percentage: getPercentage(medium),
+      bar: "bg-yellow-500",
+      bg: "bg-yellow-50",
+      text: "text-yellow-600",
+    },
+    {
+      name: "High",
+      value: high,
+      percentage: getPercentage(high),
+      bar: "bg-orange-500",
+      bg: "bg-orange-50",
+      text: "text-orange-600",
+    },
+    {
+      name: "Critical",
+      value: critical,
+      percentage: getPercentage(critical),
+      bar: "bg-red-500",
+      bg: "bg-red-50",
+      text: "text-red-600",
+    },
+  ];
 
   return (
-    <div className="bg-slate-900 border border-cyan-500/20 rounded-3xl p-8 shadow-lg">
+    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+
+      {/* TOP ACCENT */}
+
+      <div className="absolute left-0 top-0 h-1 w-full bg-gradient-to-r from-green-500 via-blue-500 to-red-500" />
 
       {/* HEADER */}
 
-      <div className="flex justify-between items-center">
+      <div className="flex items-start justify-between gap-4">
 
-        <div>
+        <div className="flex items-center gap-3">
 
-          <h2 className="text-3xl font-bold text-white">
-            Threat Distribution
-          </h2>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50">
+            <Activity
+              size={22}
+              className="text-blue-600"
+            />
+          </div>
 
-          <p className="text-slate-400 mt-2">
-            Prompt risk distribution across all scans
-          </p>
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-slate-900">
+              Threat Distribution
+            </h2>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Security findings across scanned prompts
+            </p>
+          </div>
 
         </div>
 
-        <TrendingUp
-          size={48}
-          className="text-cyan-400"
-        />
+        <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          {total} Scans
+        </span>
 
       </div>
 
+      {/* THREAT BARS */}
 
-      {/* EMPTY STATE */}
+      <div className="mt-7 space-y-5">
 
-      {total === 0 ? (
+        {threats.map((threat) => (
+          <div key={threat.name}>
 
-        <div className="mt-10 bg-slate-950 rounded-xl p-8 text-center">
-
-          <Activity
-            size={40}
-            className="text-slate-600 mx-auto"
-          />
-
-          <p className="text-slate-400 mt-4">
-
-            No scan data available yet.
-
-          </p>
-
-          <p className="text-slate-500 text-sm mt-2">
-
-            Scan prompts to view threat distribution.
-
-          </p>
-
-        </div>
-
-      ) : (
-
-        <div className="mt-10 space-y-6">
-
-          {/* SAFE */}
-
-          <div>
-
-            <div className="flex justify-between items-center mb-2">
+            <div className="mb-2 flex items-center justify-between">
 
               <div className="flex items-center gap-2">
 
-                <ShieldCheck
-                  className="text-green-400"
-                  size={20}
-                />
+                <div
+                  className={`flex h-7 w-7 items-center justify-center rounded-lg ${threat.bg}`}
+                >
+                  {threat.name === "Safe" ? (
+                    <ShieldCheck
+                      size={15}
+                      className={threat.text}
+                    />
+                  ) : (
+                    <ShieldAlert
+                      size={15}
+                      className={threat.text}
+                    />
+                  )}
+                </div>
 
-                <span>
-                  Safe Prompts
+                <span className="text-sm font-semibold text-slate-700">
+                  {threat.name}
                 </span>
 
               </div>
 
-              <span className="font-bold text-green-400">
+              <div className="flex items-center gap-2">
 
-                {safePercent}%
+                <span className="text-sm font-bold text-slate-800">
+                  {threat.value}
+                </span>
 
-              </span>
+                <span className="text-[10px] text-slate-400">
+                  ({threat.percentage}%)
+                </span>
+
+              </div>
 
             </div>
 
-            <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
+            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
 
               <div
-                className="bg-green-500 h-3 rounded-full transition-all duration-700"
+                className={`h-full rounded-full transition-all duration-700 ${threat.bar}`}
                 style={{
-                  width: `${safePercent}%`,
+                  width: `${threat.percentage}%`,
                 }}
               />
 
             </div>
 
           </div>
+        ))}
 
-
-          {/* LOW RISK */}
-
-          <div>
-
-            <div className="flex justify-between items-center mb-2">
-
-              <div className="flex items-center gap-2">
-
-                <Activity
-                  className="text-cyan-400"
-                  size={20}
-                />
-
-                <span>
-                  Low Risk
-                </span>
-
-              </div>
-
-              <span className="font-bold text-cyan-400">
-
-                {lowPercent}%
-
-              </span>
-
-            </div>
-
-            <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
-
-              <div
-                className="bg-cyan-500 h-3 rounded-full transition-all duration-700"
-                style={{
-                  width: `${lowPercent}%`,
-                }}
-              />
-
-            </div>
-
-          </div>
-
-
-          {/* MEDIUM RISK */}
-
-          <div>
-
-            <div className="flex justify-between items-center mb-2">
-
-              <div className="flex items-center gap-2">
-
-                <AlertTriangle
-                  className="text-yellow-400"
-                  size={20}
-                />
-
-                <span>
-                  Medium Risk
-                </span>
-
-              </div>
-
-              <span className="font-bold text-yellow-400">
-
-                {mediumPercent}%
-
-              </span>
-
-            </div>
-
-            <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
-
-              <div
-                className="bg-yellow-500 h-3 rounded-full transition-all duration-700"
-                style={{
-                  width: `${mediumPercent}%`,
-                }}
-              />
-
-            </div>
-
-          </div>
-
-
-          {/* HIGH RISK */}
-
-          <div>
-
-            <div className="flex justify-between items-center mb-2">
-
-              <div className="flex items-center gap-2">
-
-                <ShieldAlert
-                  className="text-orange-400"
-                  size={20}
-                />
-
-                <span>
-                  High Risk
-                </span>
-
-              </div>
-
-              <span className="font-bold text-orange-400">
-
-                {highPercent}%
-
-              </span>
-
-            </div>
-
-            <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
-
-              <div
-                className="bg-orange-500 h-3 rounded-full transition-all duration-700"
-                style={{
-                  width: `${highPercent}%`,
-                }}
-              />
-
-            </div>
-
-          </div>
-
-
-          {/* CRITICAL RISK */}
-
-          <div>
-
-            <div className="flex justify-between items-center mb-2">
-
-              <div className="flex items-center gap-2">
-
-                <ShieldAlert
-                  className="text-red-400"
-                  size={20}
-                />
-
-                <span>
-                  Critical Risk
-                </span>
-
-              </div>
-
-              <span className="font-bold text-red-400">
-
-                {criticalPercent}%
-
-              </span>
-
-            </div>
-
-            <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
-
-              <div
-                className="bg-red-500 h-3 rounded-full transition-all duration-700"
-                style={{
-                  width: `${criticalPercent}%`,
-                }}
-              />
-
-            </div>
-
-          </div>
-
-        </div>
-
-      )}
-
+      </div>
 
       {/* SUMMARY */}
 
-      <div className="grid grid-cols-3 gap-5 mt-10">
+      <div className="mt-7 grid grid-cols-3 gap-3">
 
-        {/* TOTAL */}
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
 
-        <div className="bg-slate-950 rounded-xl p-5 text-center">
-
-          <p className="text-slate-400 text-sm">
-            Total Scans
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            Total
           </p>
 
-          <h3 className="text-3xl font-bold text-cyan-400 mt-2">
+          <p className="mt-1 text-xl font-black text-slate-900">
             {total}
-          </h3>
+          </p>
 
         </div>
 
+        <div className="rounded-xl border border-green-100 bg-green-50 p-3">
 
-        {/* SAFE */}
-
-        <div className="bg-slate-950 rounded-xl p-5 text-center">
-
-          <p className="text-slate-400 text-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-green-600">
             Safe
           </p>
 
-          <h3 className="text-3xl font-bold text-green-400 mt-2">
+          <p className="mt-1 text-xl font-black text-green-600">
             {safe}
-          </h3>
+          </p>
 
         </div>
 
+        <div className="rounded-xl border border-red-100 bg-red-50 p-3">
 
-        {/* HIGH RISK FINDINGS */}
-
-        <div className="bg-slate-950 rounded-xl p-5 text-center">
-
-          <p className="text-slate-400 text-sm">
-            High-Risk
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-red-600">
+            High Risk
           </p>
 
-          <h3 className="text-3xl font-bold text-red-400 mt-2">
+          <p className="mt-1 text-xl font-black text-red-600">
             {highRiskFindings}
-          </h3>
-
-          <p className="text-xs text-slate-500 mt-1">
-            {highRiskPercent}% of scans
           </p>
 
         </div>
 
       </div>
+
+      {/* EMPTY STATE */}
+
+      {total === 0 && (
+        <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
+
+          <p className="text-xs text-slate-500">
+            No threat distribution data is available yet.
+          </p>
+
+        </div>
+      )}
 
     </div>
   );

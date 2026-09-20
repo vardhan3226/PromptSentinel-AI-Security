@@ -3,19 +3,13 @@ import { useState } from "react";
 import {
   ScanSearch,
   ShieldCheck,
-  BrainCircuit,
-  Shield,
-  Activity,
-  Cpu,
-  Radar,
-  FileText,
-  Zap,
   Bug,
   Target,
   AlertTriangle,
   CheckCircle2,
   XCircle,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
 
 function PromptScanner({
@@ -24,23 +18,35 @@ function PromptScanner({
   handleScan,
   loading,
 }) {
-  const [redTeamLoading, setRedTeamLoading] = useState(false);
-  const [robustnessResult, setRobustnessResult] = useState(null);
+  const [redTeamLoading, setRedTeamLoading] =
+    useState(false);
+
+  const [robustnessResult, setRobustnessResult] =
+    useState(null);
 
   const wordCount = prompt.trim()
     ? prompt.trim().split(/\s+/).length
     : 0;
 
+  /* ============================================================
+     RED TEAM TEST
+  ============================================================ */
+
   const handleRedTeamTest = async () => {
     if (!prompt.trim()) {
-      alert("Please enter a prompt before starting the Red-Team test.");
+      alert(
+        "Please enter a prompt before starting the Red-Team test."
+      );
       return;
     }
 
-    const token = localStorage.getItem("token");
+    const token =
+      localStorage.getItem("token");
 
     if (!token) {
-      alert("Your session has expired. Please login again.");
+      alert(
+        "Your session has expired. Please login again."
+      );
       return;
     }
 
@@ -66,17 +72,11 @@ function PromptScanner({
 
       try {
         data = await response.json();
-      } catch (error) {
+      } catch {
         throw new Error(
-          "Invalid response received from server.",
-          {
-            cause: error,
-          }
+          "Invalid response received from server."
         );
       }
-
-      console.log("Red-Team Status:", response.status);
-      console.log("Red-Team Response:", data);
 
       if (
         response.status === 401 ||
@@ -86,1079 +86,570 @@ function PromptScanner({
 
         alert(
           data?.message ||
-          "Your session has expired. Please login again."
+            "Your session has expired. Please login again."
         );
 
         return;
       }
 
       if (!response.ok) {
-        alert(
+        throw new Error(
           data?.message ||
-          "Red-Team test failed. Please try again."
+            "Red-Team test failed. Please try again."
         );
-
-        return;
       }
 
-      if (data.success) {
-        setRobustnessResult(data.robustness);
+      if (
+        data.success &&
+        data.robustness
+      ) {
+        setRobustnessResult(
+          data.robustness
+        );
       } else {
-        alert(
+        throw new Error(
           data?.message ||
-          "Red-Team test failed. Please try again."
+            "Red-Team test failed. Please try again."
         );
       }
     } catch (error) {
-      console.error("Red-Team Error:", error);
+      console.error(
+        "Red-Team Error:",
+        error
+      );
 
       alert(
         error.message ||
-        "Unable to connect to the server."
+          "Unable to connect to the server."
       );
     } finally {
       setRedTeamLoading(false);
     }
   };
 
+  /* ============================================================
+     STATE
+  ============================================================ */
+
+  const isBusy =
+    loading || redTeamLoading;
+
+  const totalMutations = Number(
+    robustnessResult?.totalMutations || 0
+  );
+
+  const detectedMutations = Number(
+    robustnessResult?.detectedMutations || 0
+  );
+
+  const missedMutations = Number(
+    robustnessResult?.missedMutations || 0
+  );
+
+  const detectionRate = Number(
+    robustnessResult?.detectionRate || 0
+  );
+
+  const mutationResults =
+    Array.isArray(
+      robustnessResult?.results
+    )
+      ? robustnessResult.results
+      : [];
+
+  /* ============================================================
+     UI
+  ============================================================ */
+
   return (
-    <section className="relative security-card overflow-hidden">
+    <section className="relative overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.06)]">
 
-      {/* =========================================================
-          BACKGROUND GLOW
-      ========================================================== */}
+      {/* BACKGROUND ACCENTS */}
+      <div className="pointer-events-none absolute right-0 top-0 h-40 w-72 rounded-full bg-blue-100/50 blur-3xl" />
 
-      <div
-        className="
-          pointer-events-none
-          absolute
-          inset-0
-          opacity-80
-          bg-[radial-gradient(circle_at_80%_0%,rgba(6,182,212,0.12),transparent_30%),radial-gradient(circle_at_0%_100%,rgba(59,130,246,0.08),transparent_35%)]
-        "
-      />
+      <div className="pointer-events-none absolute bottom-0 left-0 h-32 w-56 rounded-full bg-green-100/40 blur-3xl" />
 
-      <div className="relative z-10 p-6 md:p-8 lg:p-10">
+      {/* ========================================================
+          HEADER
+      ========================================================= */}
 
-        {/* =========================================================
-            HEADER
-        ========================================================== */}
+      <div className="relative border-b border-slate-100 px-5 py-5 sm:px-6">
 
-        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6 mb-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
-          <div className="flex items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3">
 
-            <div
-              className="
-                relative
-                shrink-0
-                flex
-                items-center
-                justify-center
-                w-14
-                h-14
-                rounded-2xl
-                bg-gradient-to-br
-                from-cyan-400
-                via-blue-500
-                to-indigo-600
-                shadow-lg
-                shadow-cyan-500/20
-              "
-            >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50">
               <ScanSearch
-                size={29}
-                className="text-white relative z-10"
-              />
-
-              <div
-                className="
-                  absolute
-                  inset-1
-                  rounded-xl
-                  border
-                  border-white/20
-                "
+                size={20}
+                className="text-blue-600"
               />
             </div>
 
             <div>
-              <div className="flex items-center gap-3 flex-wrap">
-
-                <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-                  Prompt
-                  <span className="text-security-gradient">
-                    {" "}Scanner
-                  </span>
-                </h2>
-
-                <span
-                  className="
-                    px-2.5
-                    py-1
-                    rounded-lg
-                    text-[10px]
-                    font-bold
-                    tracking-[0.18em]
-                    text-cyan-300
-                    bg-cyan-500/10
-                    border
-                    border-cyan-400/10
-                  "
-                >
-                  V1.0
-                </span>
-
-              </div>
-
-              <p className="mt-2 text-sm md:text-base text-slate-400">
-                Submit untrusted prompts for multi-layer AI security analysis.
-              </p>
-
-            </div>
-
-          </div>
-
-          {/* SECURITY STATUS */}
-
-          <div
-            className="
-              group
-              flex
-              items-center
-              gap-3
-              px-4
-              py-3
-              rounded-2xl
-              border
-              border-emerald-400/15
-              bg-emerald-500/5
-              shadow-lg
-              shadow-emerald-500/5
-            "
-          >
-            <div className="relative flex items-center justify-center">
-
-              <span
-                className="
-                  absolute
-                  w-8
-                  h-8
-                  rounded-full
-                  bg-emerald-400/10
-                  security-pulse
-                "
-              />
-
-              <ShieldCheck
-                size={22}
-                className="relative text-emerald-400"
-              />
-
-            </div>
-
-            <div>
-
               <div className="flex items-center gap-2">
 
-                <span className="text-sm font-semibold text-emerald-300">
-                  Engine Ready
-                </span>
+                <h2 className="text-lg font-bold tracking-tight text-[#10254d]">
+                  Prompt Scanner
+                </h2>
 
-                <span className="relative flex w-2 h-2">
-
-                  <span
-                    className="
-                      absolute
-                      inline-flex
-                      w-full
-                      h-full
-                      rounded-full
-                      bg-emerald-400
-                      opacity-75
-                      animate-ping
-                    "
-                  />
-
-                  <span
-                    className="
-                      relative
-                      inline-flex
-                      w-2
-                      h-2
-                      rounded-full
-                      bg-emerald-400
-                    "
-                  />
-
+                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-blue-600">
+                  AI Security
                 </span>
 
               </div>
 
-              <p className="text-[10px] mt-0.5 text-slate-500">
-                Multi-layer protection active
+              <p className="mt-0.5 text-xs text-slate-500">
+                Analyze a prompt before sending it to an AI model.
               </p>
-
             </div>
+
+          </div>
+
+          {/* ENGINE STATUS */}
+
+          <div className="flex items-center gap-2 self-start rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 sm:self-auto">
+
+            <span className="relative flex h-2 w-2">
+
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+
+            </span>
+
+            <span className="text-[10px] font-semibold text-emerald-700">
+              Engine Ready
+            </span>
 
           </div>
 
         </div>
+      </div>
 
-        {/* =========================================================
-            SECURITY PIPELINE
-        ========================================================== */}
+      {/* ========================================================
+          MAIN INPUT AREA
+      ========================================================= */}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-7">
+      <div className="relative px-5 py-5 sm:px-6">
 
-          <div
-            className="
-              group
-              relative
-              flex
-              items-center
-              gap-3
-              p-4
-              rounded-2xl
-              bg-slate-950/35
-              border
-              border-slate-700/30
-              transition-all
-              duration-300
-              hover:border-emerald-400/20
-              hover:-translate-y-1
-            "
-          >
-            <div
-              className="
-                flex
-                items-center
-                justify-center
-                w-10
-                h-10
-                rounded-xl
-                bg-emerald-500/10
-                border
-                border-emerald-400/10
-              "
-            >
-              <Shield
-                size={19}
-                className="text-emerald-400"
-              />
-            </div>
+        {/* INPUT LABEL */}
 
-            <div>
-              <p className="text-sm font-semibold text-slate-200">
-                Local Detection
-              </p>
+        <div className="mb-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5">
 
-              <p className="text-[11px] text-slate-500 mt-1">
-                Pattern analysis engine
-              </p>
-            </div>
-          </div>
+          <ScanSearch
+            size={16}
+            className="shrink-0 text-slate-400"
+          />
 
-          <div
-            className="
-              group
-              relative
-              flex
-              items-center
-              gap-3
-              p-4
-              rounded-2xl
-              bg-slate-950/35
-              border
-              border-slate-700/30
-              transition-all
-              duration-300
-              hover:border-cyan-400/20
-              hover:-translate-y-1
-            "
-          >
-            <div
-              className="
-                flex
-                items-center
-                justify-center
-                w-10
-                h-10
-                rounded-xl
-                bg-cyan-500/10
-                border
-                border-cyan-400/10
-              "
-            >
-              <BrainCircuit
-                size={19}
-                className="text-cyan-400"
-              />
-            </div>
-
-            <div>
-              <p className="text-sm font-semibold text-slate-200">
-                AI Analysis
-              </p>
-
-              <p className="text-[11px] text-slate-500 mt-1">
-                Secondary intelligence layer
-              </p>
-            </div>
-          </div>
-
-          <div
-            className="
-              group
-              relative
-              flex
-              items-center
-              gap-3
-              p-4
-              rounded-2xl
-              bg-slate-950/35
-              border
-              border-slate-700/30
-              transition-all
-              duration-300
-              hover:border-violet-400/20
-              hover:-translate-y-1
-            "
-          >
-            <div
-              className="
-                flex
-                items-center
-                justify-center
-                w-10
-                h-10
-                rounded-xl
-                bg-violet-500/10
-                border
-                border-violet-400/10
-              "
-            >
-              <Activity
-                size={19}
-                className="text-violet-400"
-              />
-            </div>
-
-            <div>
-              <p className="text-sm font-semibold text-slate-200">
-                Threat Classification
-              </p>
-
-              <p className="text-[11px] text-slate-500 mt-1">
-                Risk and confidence scoring
-              </p>
-            </div>
-          </div>
+          <span className="text-xs text-slate-500">
+            Paste or type a prompt to analyze...
+          </span>
 
         </div>
 
-        {/* =========================================================
-            PROMPT CONSOLE
-        ========================================================== */}
+        {/* TEXTAREA */}
 
         <div
           className={`
-            relative
-            rounded-3xl
-            border
-            transition-all
-            duration-500
             overflow-hidden
+            rounded-xl
+            border
+            bg-white
+            transition-all
+            duration-200
             ${
               loading
-                ? "border-cyan-400/40 security-glow scanning-effect"
-                : "border-slate-700/50"
+                ? "border-blue-300 ring-4 ring-blue-50"
+                : "border-slate-200 focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-50"
             }
           `}
         >
 
-          {/* CONSOLE HEADER */}
+          <textarea
+            rows={7}
+            value={prompt}
+            onChange={(event) => {
+              setPrompt(
+                event.target.value
+              );
 
-          <div
+              setRobustnessResult(
+                null
+              );
+            }}
+            disabled={isBusy}
+            placeholder="Type or paste your prompt here..."
             className="
-              flex
-              items-center
-              justify-between
-              gap-4
-              px-5
-              py-3.5
-              bg-slate-950/70
-              border-b
-              border-slate-800/80
-            "
-          >
-
-            <div className="flex items-center gap-3">
-
-              <div className="flex gap-1.5">
-
-                <span className="w-2.5 h-2.5 rounded-full bg-red-400/70" />
-                <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/70" />
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/70" />
-
-              </div>
-
-              <div className="flex items-center gap-2">
-
-                <Cpu
-                  size={14}
-                  className="text-cyan-400"
-                />
-
-                <span className="text-xs font-medium tracking-wide text-slate-400">
-                  UNTRUSTED PROMPT INPUT
-                </span>
-
-              </div>
-
-            </div>
-
-            <div className="hidden sm:flex items-center gap-2">
-
-              <Radar
-                size={14}
-                className={
-                  loading
-                    ? "text-cyan-400 animate-spin"
-                    : "text-slate-600"
-                }
-              />
-
-              <span className="text-[10px] tracking-[0.16em] text-slate-600">
-                {loading ? "SCANNING" : "READY"}
-              </span>
-
-            </div>
-
-          </div>
-
-          {/* TEXTAREA */}
-
-          <div className="relative bg-slate-950/40">
-
-            <textarea
-              rows={10}
-              value={prompt}
-              onChange={(e) => {
-                setPrompt(e.target.value);
-                setRobustnessResult(null);
-              }}
-              disabled={loading || redTeamLoading}
-              placeholder="Paste or type a prompt for security analysis..."
-              className="
-                security-input
-                relative
-                z-10
-                min-h-[280px]
-                w-full
-                border-0
-                rounded-none
-                bg-transparent
-                p-6
-                text-sm
-                leading-7
-                text-slate-200
-                placeholder:text-slate-600
-                resize-none
-                focus:ring-0
-                disabled:opacity-60
-                disabled:cursor-not-allowed
-              "
-            />
-
-            <div
-              className="
-                pointer-events-none
-                absolute
-                bottom-4
-                right-4
-                flex
-                items-center
-                gap-1.5
-                opacity-50
-              "
-            >
-
-              <Zap
-                size={13}
-                className="text-cyan-400"
-              />
-
-              <span className="text-[10px] text-slate-500">
-                SECURITY MONITORING
-              </span>
-
-            </div>
-
-          </div>
-
-          {/* CONSOLE FOOTER */}
-
-          <div
-            className="
-              flex
-              flex-col
-              sm:flex-row
-              sm:items-center
-              sm:justify-between
-              gap-3
-              px-5
+              min-h-[180px]
+              w-full
+              resize-none
+              border-0
+              bg-transparent
+              px-4
               py-4
-              bg-slate-950/60
-              border-t
-              border-slate-800/80
+              text-sm
+              leading-6
+              text-slate-700
+              outline-none
+              placeholder:text-slate-400
+              focus:ring-0
+              disabled:cursor-not-allowed
+              disabled:bg-slate-50
+              disabled:opacity-70
             "
-          >
+          />
 
-            <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/70 px-4 py-2.5">
 
-              <div className="flex items-center gap-2">
+            <span className="text-[11px] text-slate-400">
+              {wordCount}{" "}
+              {wordCount === 1
+                ? "word"
+                : "words"}
+            </span>
 
-                <FileText
-                  size={14}
-                  className="text-slate-500"
-                />
-
-                <span className="text-xs text-slate-500">
-                  Characters
-                </span>
-
-                <span className="text-xs font-semibold text-slate-300">
-                  {prompt.length}
-                </span>
-
-              </div>
-
-              <div className="w-px h-4 bg-slate-700 hidden sm:block" />
-
-              <div className="flex items-center gap-2">
-
-                <span className="text-xs text-slate-500">
-                  Words
-                </span>
-
-                <span className="text-xs font-semibold text-slate-300">
-                  {wordCount}
-                </span>
-
-              </div>
-
-            </div>
-
-            <div className="flex items-center gap-2">
-
-              <span
-                className={`
-                  w-2
-                  h-2
-                  rounded-full
-                  ${
-                    loading || redTeamLoading
-                      ? "bg-cyan-400 animate-pulse"
-                      : "bg-emerald-400"
-                  }
-                `}
-              />
-
-              <span
-                className={`
-                  text-xs
-                  font-medium
-                  ${
-                    loading || redTeamLoading
-                      ? "text-cyan-400"
-                      : "text-emerald-400"
-                  }
-                `}
-              >
-                {loading || redTeamLoading
-                  ? "Security analysis in progress"
-                  : "Threat detection active"}
-              </span>
-
-            </div>
+            <span className="text-[11px] font-medium text-slate-400">
+              AI Security Analysis
+            </span>
 
           </div>
 
         </div>
 
-        {/* =========================================================
-            NORMAL SECURITY SCAN
-        ========================================================== */}
+        {/* ======================================================
+            BUTTONS
+        ====================================================== */}
 
-        <button
-          onClick={handleScan}
-          disabled={
-            loading ||
-            redTeamLoading ||
-            !prompt.trim()
-          }
-          className="
-            security-button
-            relative
-            mt-7
-            w-full
-            min-h-[62px]
-            flex
-            items-center
-            justify-center
-            gap-3
-            text-base
-            md:text-lg
-            font-bold
-            overflow-hidden
-            disabled:opacity-40
-            disabled:cursor-not-allowed
-            disabled:hover:translate-y-0
-            disabled:hover:brightness-100
-          "
-        >
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
 
-          <span
-            className="
-              pointer-events-none
-              absolute
-              inset-0
-              bg-gradient-to-r
-              from-transparent
-              via-white/10
-              to-transparent
-              -translate-x-full
-              group-hover:translate-x-full
-              transition-transform
-              duration-1000
-            "
-          />
+          {/* NORMAL SCAN */}
 
-          {loading ? (
-            <>
-              <span
-                className="
-                  w-5
-                  h-5
-                  rounded-full
-                  border-2
-                  border-white/30
-                  border-t-white
-                  animate-spin
-                "
-              />
-
-              <span className="relative">
-                Scanning Security Layers...
-              </span>
-            </>
-          ) : (
-            <>
-              <ScanSearch
-                size={21}
-                className="relative"
-              />
-
-              <span className="relative">
-                Start Security Scan
-              </span>
-            </>
-          )}
-
-        </button>
-
-        {/* =========================================================
-            RED-TEAM MODE
-        ========================================================== */}
-
-        <div
-          className="
-            mt-5
-            rounded-3xl
-            border
-            border-orange-400/15
-            bg-orange-500/[0.03]
-            overflow-hidden
-          "
-        >
-
-          <div
+          <button
+            type="button"
+            onClick={handleScan}
+            disabled={isBusy}
             className="
               flex
-              flex-col
-              md:flex-row
-              md:items-center
-              md:justify-between
-              gap-4
-              p-5
-              md:p-6
+              min-h-[48px]
+              flex-1
+              items-center
+              justify-center
+              gap-2
+              rounded-xl
+              bg-blue-600
+              px-5
+              text-sm
+              font-bold
+              text-white
+              shadow-sm
+              transition
+              hover:bg-blue-700
+              disabled:cursor-not-allowed
+              disabled:opacity-60
             "
           >
 
-            <div className="flex items-start gap-4">
-
-              <div
-                className="
-                  shrink-0
-                  w-11
-                  h-11
-                  rounded-xl
-                  flex
-                  items-center
-                  justify-center
-                  bg-orange-500/10
-                  border
-                  border-orange-400/15
-                "
-              >
-                <Bug
-                  size={21}
-                  className="text-orange-400"
+            {loading ? (
+              <>
+                <RefreshCw
+                  size={17}
+                  className="animate-spin"
                 />
-              </div>
+
+                Scanning...
+              </>
+            ) : (
+              <>
+                <ShieldCheck
+                  size={17}
+                />
+
+                Scan Prompt
+              </>
+            )}
+
+          </button>
+
+          {/* RED TEAM */}
+
+          <button
+            type="button"
+            onClick={handleRedTeamTest}
+            disabled={isBusy}
+            className="
+              flex
+              min-h-[48px]
+              flex-1
+              items-center
+              justify-center
+              gap-2
+              rounded-xl
+              border
+              border-orange-200
+              bg-orange-50
+              px-5
+              text-sm
+              font-bold
+              text-orange-700
+              transition
+              hover:bg-orange-100
+              disabled:cursor-not-allowed
+              disabled:opacity-60
+            "
+          >
+
+            {redTeamLoading ? (
+              <>
+                <RefreshCw
+                  size={17}
+                  className="animate-spin"
+                />
+
+                Testing...
+              </>
+            ) : (
+              <>
+                <Bug size={17} />
+
+                Red-Team Test
+              </>
+            )}
+
+          </button>
+
+        </div>
+
+        {/* ======================================================
+            SECURITY PIPELINE
+        ====================================================== */}
+
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+
+          <span className="rounded-full bg-slate-100 px-2.5 py-1">
+            Input
+          </span>
+
+          <span className="text-slate-300">
+            →
+          </span>
+
+          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-600">
+            Detection
+          </span>
+
+          <span className="text-slate-300">
+            →
+          </span>
+
+          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-600">
+            AI Analysis
+          </span>
+
+          <span className="text-slate-300">
+            →
+          </span>
+
+          <span className="rounded-full bg-orange-50 px-2.5 py-1 text-orange-600">
+            Risk Score
+          </span>
+
+          <span className="text-slate-300">
+            →
+          </span>
+
+          <span className="rounded-full bg-green-50 px-2.5 py-1 text-green-600">
+            Result
+          </span>
+
+        </div>
+
+        {/* ======================================================
+            RED TEAM RESULT
+        ====================================================== */}
+
+        {robustnessResult && (
+          <div className="mt-6 rounded-2xl border border-orange-100 bg-orange-50/40 p-4 sm:p-5">
+
+            {/* RESULT HEADER */}
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 
               <div>
 
-                <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
 
-                  <h3 className="text-base md:text-lg font-bold text-white">
+                  <Bug
+                    size={18}
+                    className="text-orange-600"
+                  />
+
+                  <h3 className="text-base font-bold text-slate-800">
                     Red-Team Robustness Test
                   </h3>
 
-                  <span
-                    className="
-                      px-2
-                      py-1
-                      rounded-md
-                      text-[9px]
-                      font-bold
-                      tracking-[0.15em]
-                      text-orange-300
-                      bg-orange-500/10
-                      border
-                      border-orange-400/10
-                    "
-                  >
-                    ADVERSARIAL
-                  </span>
-
                 </div>
 
-                <p className="text-xs md:text-sm text-slate-500 mt-1 max-w-2xl">
-                  Generate controlled attack mutations and measure how consistently
-                  the local and semantic detection layers identify them.
+                <p className="mt-1 text-xs text-slate-500">
+                  Mutated versions of the supplied prompt were tested against the local security layers.
                 </p>
+
+              </div>
+
+              <div className="flex items-center gap-2 rounded-full border border-orange-200 bg-white px-3 py-1.5">
+
+                <Target
+                  size={14}
+                  className="text-orange-600"
+                />
+
+                <span className="text-xs font-bold text-orange-700">
+                  {detectionRate}% detection
+                </span>
 
               </div>
 
             </div>
 
-            <button
-              onClick={handleRedTeamTest}
-              disabled={
-                loading ||
-                redTeamLoading ||
-                !prompt.trim()
-              }
-              className="
-                shrink-0
-                min-h-[48px]
-                px-6
-                rounded-xl
-                flex
-                items-center
-                justify-center
-                gap-2
-                bg-orange-500/10
-                border
-                border-orange-400/20
-                text-orange-300
-                text-sm
-                font-semibold
-                transition-all
-                duration-300
-                hover:bg-orange-500/15
-                hover:border-orange-400/30
-                disabled:opacity-40
-                disabled:cursor-not-allowed
-              "
-            >
+            {/* METRICS */}
 
-              {redTeamLoading ? (
-                <>
-                  <RefreshCw
-                    size={17}
-                    className="animate-spin"
-                  />
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
 
-                  Running Test...
-                </>
-              ) : (
-                <>
-                  <Target size={17} />
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  Mutations
+                </p>
 
-                  Run Red-Team Test
-                </>
-              )}
+                <p className="mt-1 text-2xl font-extrabold text-slate-800">
+                  {totalMutations}
+                </p>
+              </div>
 
-            </button>
+              <div className="rounded-xl border border-emerald-100 bg-white p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
+                  Detected
+                </p>
 
-          </div>
+                <p className="mt-1 text-2xl font-extrabold text-emerald-700">
+                  {detectedMutations}
+                </p>
+              </div>
 
-          {/* =======================================================
-              ROBUSTNESS RESULT
-          ======================================================== */}
+              <div className="rounded-xl border border-red-100 bg-white p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-red-600">
+                  Missed
+                </p>
 
-          {robustnessResult && (
+                <p className="mt-1 text-2xl font-extrabold text-red-700">
+                  {missedMutations}
+                </p>
+              </div>
 
-            <div
-              className="
-                border-t
-                border-orange-400/10
-                bg-slate-950/30
-                p-5
-                md:p-6
-              "
-            >
+              <div className="rounded-xl border border-blue-100 bg-white p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-600">
+                  Detection Rate
+                </p>
 
-              {/* RESULT HEADER */}
+                <p className="mt-1 text-2xl font-extrabold text-blue-700">
+                  {detectionRate}%
+                </p>
+              </div>
 
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+            </div>
 
-                <div>
+            {/* MUTATION LIST */}
 
-                  <div className="flex items-center gap-2">
+            {mutationResults.length > 0 && (
+              <div className="mt-5">
 
-                    <Activity
-                      size={18}
-                      className="text-orange-400"
-                    />
+                <div className="mb-3 flex items-center justify-between">
 
-                    <h4 className="text-base font-bold text-white">
-                      Robustness Test Results
-                    </h4>
+                  <h4 className="text-sm font-bold text-slate-700">
+                    Mutation Results
+                  </h4>
 
-                  </div>
-
-                  <p className="text-xs text-slate-500 mt-1">
-                    Detection performance across generated attack mutations.
-                  </p>
-
-                </div>
-
-                <div className="flex items-center gap-2">
-
-                  {robustnessResult.detectionRate >= 80 ? (
-                    <CheckCircle2
-                      size={18}
-                      className="text-emerald-400"
-                    />
-                  ) : (
-                    <AlertTriangle
-                      size={18}
-                      className="text-orange-400"
-                    />
-                  )}
-
-                  <span className="text-sm font-semibold text-slate-200">
-                    Detection Rate
-                  </span>
-
-                  <span className="text-xl font-bold text-cyan-400">
-                    {robustnessResult.detectionRate}%
+                  <span className="text-[10px] text-slate-400">
+                    {mutationResults.length} tested
                   </span>
 
                 </div>
 
-              </div>
+                <div className="space-y-2">
 
-              {/* STAT CARDS */}
+                  {mutationResults.map(
+                    (item, index) => {
+                      const detected =
+                        Boolean(
+                          item?.detected
+                        );
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
-
-                <div
-                  className="
-                    rounded-2xl
-                    p-4
-                    bg-slate-900/60
-                    border
-                    border-slate-700/40
-                  "
-                >
-
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500">
-                    Mutations
-                  </p>
-
-                  <p className="text-2xl font-bold text-white mt-1">
-                    {robustnessResult.totalMutations}
-                  </p>
-
-                </div>
-
-                <div
-                  className="
-                    rounded-2xl
-                    p-4
-                    bg-emerald-500/[0.04]
-                    border
-                    border-emerald-400/10
-                  "
-                >
-
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500">
-                    Detected
-                  </p>
-
-                  <p className="text-2xl font-bold text-emerald-400 mt-1">
-                    {robustnessResult.detectedMutations}
-                  </p>
-
-                </div>
-
-                <div
-                  className="
-                    rounded-2xl
-                    p-4
-                    bg-red-500/[0.04]
-                    border
-                    border-red-400/10
-                  "
-                >
-
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500">
-                    Missed
-                  </p>
-
-                  <p className="text-2xl font-bold text-red-400 mt-1">
-                    {robustnessResult.missedMutations}
-                  </p>
-
-                </div>
-
-                <div
-                  className="
-                    rounded-2xl
-                    p-4
-                    bg-cyan-500/[0.04]
-                    border
-                    border-cyan-400/10
-                  "
-                >
-
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500">
-                    Detection Rate
-                  </p>
-
-                  <p className="text-2xl font-bold text-cyan-400 mt-1">
-                    {robustnessResult.detectionRate}%
-                  </p>
-
-                </div>
-
-              </div>
-
-              {/* MUTATION LIST */}
-
-              {Array.isArray(robustnessResult.results) &&
-                robustnessResult.results.length > 0 && (
-
-                <div className="mt-5">
-
-                  <div className="flex items-center gap-2 mb-3">
-
-                    <Radar
-                      size={15}
-                      className="text-slate-500"
-                    />
-
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                      Mutation Analysis
-                    </span>
-
-                  </div>
-
-                  <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
-
-                    {robustnessResult.results.map(
-                      (item) => (
-
+                      return (
                         <div
-                          key={item.index}
-                          className="
-                            rounded-xl
-                            border
-                            border-slate-800
-                            bg-slate-900/50
-                            p-3
-                          "
+                          key={
+                            item?.index ||
+                            index
+                          }
+                          className="rounded-xl border border-slate-200 bg-white p-3"
                         >
 
                           <div className="flex items-start gap-3">
 
-                            <div className="shrink-0 mt-0.5">
-
-                              {item.detected ? (
+                            <div
+                              className={`
+                                mt-0.5
+                                flex
+                                h-7
+                                w-7
+                                shrink-0
+                                items-center
+                                justify-center
+                                rounded-lg
+                                ${
+                                  detected
+                                    ? "bg-emerald-50 text-emerald-600"
+                                    : "bg-red-50 text-red-600"
+                                }
+                              `}
+                            >
+                              {detected ? (
                                 <CheckCircle2
-                                  size={17}
-                                  className="text-emerald-400"
+                                  size={15}
                                 />
                               ) : (
                                 <XCircle
-                                  size={17}
-                                  className="text-red-400"
+                                  size={15}
                                 />
                               )}
-
                             </div>
 
                             <div className="min-w-0 flex-1">
 
-                              <div className="flex items-center justify-between gap-3">
-
-                                <span className="text-[10px] font-bold text-slate-500">
-                                  MUTATION #{item.index}
-                                </span>
-
-                                <span
-                                  className={`
-                                    text-[10px]
-                                    font-semibold
-                                    ${
-                                      item.detected
-                                        ? "text-emerald-400"
-                                        : "text-red-400"
-                                    }
-                                  `}
-                                >
-                                  {item.detected
-                                    ? "DETECTED"
-                                    : "MISSED"}
-                                </span>
-
-                              </div>
-
-                              <p className="text-xs leading-5 text-slate-300 mt-1 break-words">
-                                {item.mutation}
+                              <p className="break-words text-xs font-medium leading-5 text-slate-700">
+                                {item?.mutation ||
+                                  "Mutation"}
                               </p>
 
-                              <div className="flex flex-wrap gap-2 mt-2">
+                              <div className="mt-2 flex flex-wrap gap-1.5">
 
-                                <span className="px-2 py-1 rounded-md bg-slate-800 text-[9px] text-slate-400">
-                                  Local: {item.localDetected ? "Detected" : "Safe"}
+                                <span className="rounded-md bg-slate-100 px-2 py-1 text-[8px] font-semibold text-slate-500">
+                                  {detected
+                                    ? "Detected"
+                                    : "Missed"}
                                 </span>
 
-                                <span className="px-2 py-1 rounded-md bg-slate-800 text-[9px] text-slate-400">
-                                  Semantic: {item.semanticDetected ? "Detected" : "Safe"}
+                                <span className="rounded-md bg-slate-100 px-2 py-1 text-[8px] text-slate-500">
+                                  Threat:{" "}
+                                  {item?.threatLevel ||
+                                    "SAFE"}
                                 </span>
 
-                                <span className="px-2 py-1 rounded-md bg-slate-800 text-[9px] text-slate-400">
-                                  Threat: {item.threatLevel}
-                                </span>
-
-                                <span className="px-2 py-1 rounded-md bg-slate-800 text-[9px] text-slate-400">
-                                  Similarity: {item.similarityScore}%
+                                <span className="rounded-md bg-slate-100 px-2 py-1 text-[8px] text-slate-500">
+                                  Similarity:{" "}
+                                  {Number(
+                                    item?.similarityScore ||
+                                      0
+                                  )}
+                                  %
                                 </span>
 
                               </div>
@@ -1168,46 +659,40 @@ function PromptScanner({
                           </div>
 
                         </div>
-
-                      )
-                    )}
-
-                  </div>
+                      );
+                    }
+                  )}
 
                 </div>
 
-              )}
+              </div>
+            )}
 
-            </div>
+            {/* NO MUTATIONS */}
 
-          )}
+            {totalMutations === 0 && (
+              <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-center">
 
-        </div>
+                <Sparkles
+                  size={20}
+                  className="mx-auto text-blue-500"
+                />
 
-        {/* =========================================================
-            SCAN PIPELINE STATUS
-        ========================================================== */}
+                <p className="mt-2 text-sm font-semibold text-slate-700">
+                  No attack mutations generated
+                </p>
 
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-3 text-[10px] tracking-[0.14em] text-slate-600">
+                <p className="mt-1 text-xs text-slate-400">
+                  The supplied prompt did not match the current mutation patterns.
+                </p>
 
-          <span>INPUT</span>
+              </div>
+            )}
 
-          <span className="w-6 h-px bg-slate-700" />
-
-          <span>DETECTION</span>
-
-          <span className="w-6 h-px bg-slate-700" />
-
-          <span>AI ANALYSIS</span>
-
-          <span className="w-6 h-px bg-slate-700" />
-
-          <span>CLASSIFICATION</span>
-
-        </div>
+          </div>
+        )}
 
       </div>
-
     </section>
   );
 }

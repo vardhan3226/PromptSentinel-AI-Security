@@ -1,13 +1,34 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+
+// =========================
+// Public Pages
+// =========================
 
 import Splash from "./pages/Splash/Splash";
 import Home from "./pages/Home/Home";
+import Features from "./pages/Features/Features";
+import HowItWorks from "./pages/HowItWorks/HowItWorks";
+import About from "./pages/About/About";
+import Technology from "./pages/Technology/Technology";
+
+// =========================
+// Authentication
+// =========================
+
 import Register from "./pages/Auth/Register";
 import Login from "./pages/Auth/Login";
 
+// =========================
+// Application Pages
+// =========================
+
 import Dashboard from "./pages/Dashboard/Dashboard";
 import Profile from "./pages/Profile/Profile";
-
 import PromptScannerPage from "./pages/PromptScannerPage/PromptScanner";
 import ScanHistoryPage from "./pages/ScanHistoryPage/ScanHistory";
 import AnalyticsPage from "./pages/AnalyticsPage/Analytics";
@@ -17,27 +38,96 @@ function App() {
     <BrowserRouter>
       <Routes>
 
-        <Route path="/" element={<Navigate to="/splash" replace />} />
+        {/* =====================================
+            PUBLIC WEBSITE
+        ===================================== */}
 
-        <Route path="/splash" element={<Splash />} />
+        <Route
+          path="/"
+          element={<Navigate to="/splash" replace />}
+        />
 
-        <Route path="/home" element={<Home />} />
+        <Route
+          path="/splash"
+          element={<Splash />}
+        />
 
-        <Route path="/register" element={<Register />} />
+        <Route
+          path="/home"
+          element={<Home />}
+        />
 
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/features"
+          element={<Features />}
+        />
 
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route
+          path="/how-it-works"
+          element={<HowItWorks />}
+        />
 
-        <Route path="/scanner" element={<PromptScannerPage />} />
+        <Route
+          path="/about"
+          element={<About />}
+        />
 
-        <Route path="/history" element={<ScanHistoryPage />} />
+        <Route
+          path="/technology"
+          element={<Technology />}
+        />
 
-        <Route path="/analytics" element={<AnalyticsPage />} />
+        {/* =====================================
+            AUTHENTICATION
+        ===================================== */}
 
-        <Route path="/profile" element={<Profile />} />
+        <Route
+          path="/register"
+          element={<Register />}
+        />
 
-        <Route path="*" element={<Navigate to="/splash" replace />} />
+        <Route
+          path="/login"
+          element={<Login />}
+        />
+
+        {/* =====================================
+            APPLICATION
+        ===================================== */}
+
+        <Route
+          path="/dashboard"
+          element={<Dashboard />}
+        />
+
+        <Route
+          path="/scanner"
+          element={<PromptScannerPage />}
+        />
+
+        <Route
+          path="/history"
+          element={<ScanHistoryPage />}
+        />
+
+        <Route
+          path="/analytics"
+          element={<AnalyticsPage />}
+        />
+
+        <Route
+          path="/profile"
+          element={<Profile />}
+        />
+
+        {/* =====================================
+            FALLBACK
+        ===================================== */}
+
+        <Route
+          path="*"
+          element={<Navigate to="/splash" replace />}
+        />
 
       </Routes>
     </BrowserRouter>

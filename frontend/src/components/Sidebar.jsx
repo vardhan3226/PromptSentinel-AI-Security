@@ -6,8 +6,6 @@ import {
   User,
   LogOut,
   ShieldCheck,
-  Activity,
-  ChevronRight,
 } from "lucide-react";
 
 function Sidebar({
@@ -15,422 +13,301 @@ function Sidebar({
   navigate,
   handleLogout,
 }) {
-  const commandItems = [
+  const menuItems = [
     {
       name: "Dashboard",
       path: "/dashboard",
-      icon: <LayoutDashboard size={19} />,
+      icon: LayoutDashboard,
     },
     {
       name: "Prompt Scanner",
       path: "/scanner",
-      icon: <ScanSearch size={19} />,
+      icon: ScanSearch,
     },
     {
       name: "Scan History",
       path: "/history",
-      icon: <History size={19} />,
+      icon: History,
     },
-  ];
-
-  const intelligenceItems = [
     {
       name: "Analytics",
       path: "/analytics",
-      icon: <BarChart3 size={19} />,
+      icon: BarChart3,
     },
-  ];
-
-  const userItems = [
     {
       name: "Profile",
       path: "/profile",
-      icon: <User size={19} />,
+      icon: User,
     },
   ];
-
-  const renderMenuItem = (item) => {
-    const isActive = active === item.name;
-
-    return (
-      <button
-        key={item.name}
-        onClick={() => navigate(item.path)}
-        className={`
-          group
-          relative
-          w-full
-          flex
-          items-center
-          gap-3
-          px-4
-          py-3.5
-          mb-2
-          rounded-2xl
-          text-left
-          transition-all
-          duration-300
-          ${
-            isActive
-              ? `
-                bg-gradient-to-r
-                from-cyan-400
-                to-blue-500
-                text-slate-950
-                font-bold
-                shadow-lg
-                shadow-cyan-500/20
-              `
-              : `
-                text-slate-400
-                hover:text-slate-100
-                hover:bg-slate-800/60
-              `
-          }
-        `}
-      >
-        <span
-          className={`
-            relative
-            z-10
-            flex
-            items-center
-            justify-center
-            w-9
-            h-9
-            rounded-xl
-            transition-all
-            duration-300
-            ${
-              isActive
-                ? `
-                  bg-slate-950/10
-                `
-                : `
-                  bg-slate-800/60
-                  group-hover:bg-slate-700/80
-                  group-hover:scale-105
-                `
-            }
-          `}
-        >
-          {item.icon}
-        </span>
-
-        <span className="relative z-10 flex-1 text-sm">
-          {item.name}
-        </span>
-
-        {isActive && (
-          <ChevronRight
-            size={17}
-            strokeWidth={2.5}
-            className="relative z-10"
-          />
-        )}
-      </button>
-    );
-  };
 
   return (
     <aside
       className="
-        relative
-        w-72
-        min-h-screen
+        fixed
+        left-0
+        top-0
+        z-50
         flex
+        h-dvh
+        w-65
         flex-col
         overflow-hidden
         border-r
-        border-slate-700/40
-        bg-slate-950/85
-        backdrop-blur-2xl
+        border-white/10
+        bg-[#0b1f3a]
+        text-white
       "
     >
-      {/* Background glow */}
+      {/* =====================================================
+          BRAND
+      ===================================================== */}
 
       <div
         className="
-          pointer-events-none
-          absolute
-          top-0
-          left-0
-          right-0
-          h-80
-          bg-gradient-to-b
-          from-cyan-500/10
-          via-blue-500/5
-          to-transparent
-        "
-      />
-
-      {/* Brand */}
-
-      <div
-        className="
-          relative
-          z-10
-          px-7
-          py-7
+          flex
+          h-20.5
+          min-h-20.5
+          shrink-0
+          items-center
           border-b
-          border-slate-800/80
+          border-white/10
+          px-5
         "
       >
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <div
             className="
-              relative
               flex
+              h-10
+              w-10
+              shrink-0
               items-center
               justify-center
-              w-12
-              h-12
-              rounded-2xl
-              bg-gradient-to-br
-              from-cyan-400
-              via-blue-500
-              to-indigo-600
-              shadow-lg
-              shadow-cyan-500/20
+              rounded-xl
+              bg-white/10
             "
           >
             <ShieldCheck
-              size={27}
-              className="text-white"
-              strokeWidth={2.3}
-            />
-
-            <div
-              className="
-                absolute
-                inset-1
-                rounded-xl
-                border
-                border-white/20
-              "
+              size={22}
+              className="text-cyan-300"
+              strokeWidth={2}
             />
           </div>
 
-          <div>
-            <h1 className="text-lg font-bold tracking-tight text-white">
+          <div className="min-w-0">
+            <h1 className="truncate text-[17px] font-extrabold tracking-tight">
               Prompt
-              <span className="text-cyan-400">
+              <span className="text-cyan-300">
                 Sentinel
               </span>
             </h1>
 
-            <div className="flex items-center gap-1.5 mt-1">
-              <span
-                className="
-                  w-1.5
-                  h-1.5
-                  rounded-full
-                  bg-emerald-400
-                  animate-pulse
-                "
-              />
-
-              <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">
-                AI Security OS
-              </p>
-            </div>
+            <p
+              className="
+                mt-0.5
+                truncate
+                text-[8px]
+                font-medium
+                uppercase
+                tracking-[0.16em]
+                text-slate-400
+              "
+            >
+              AI Security Platform
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* =====================================================
+          NAVIGATION
+      ===================================================== */}
 
       <nav
         className="
-          relative
-          z-10
+          min-h-0
           flex-1
-          px-5
-          py-6
           overflow-y-auto
+          px-3
+          py-5
+          scrollbar-thin
         "
       >
-        {/* Command Center */}
-
-        <div className="mb-7">
-          <p
-            className="
-              px-3
-              mb-3
-              text-[10px]
-              font-semibold
-              tracking-[0.2em]
-              text-slate-600
-            "
-          >
-            COMMAND CENTER
-          </p>
-
-          {commandItems.map(renderMenuItem)}
-        </div>
-
-        {/* Intelligence */}
-
-        <div className="mb-7">
-          <p
-            className="
-              px-3
-              mb-3
-              text-[10px]
-              font-semibold
-              tracking-[0.2em]
-              text-slate-600
-            "
-          >
-            INTELLIGENCE
-          </p>
-
-          {intelligenceItems.map(renderMenuItem)}
-        </div>
-
-        {/* User */}
-
-        <div>
-          <p
-            className="
-              px-3
-              mb-3
-              text-[10px]
-              font-semibold
-              tracking-[0.2em]
-              text-slate-600
-            "
-          >
-            USER
-          </p>
-
-          {userItems.map(renderMenuItem)}
-        </div>
-      </nav>
-
-      {/* Bottom section */}
-
-      <div
-        className="
-          relative
-          z-10
-          p-5
-          border-t
-          border-slate-800/80
-        "
-      >
-        {/* System status */}
-
-        <div
+        <p
           className="
-            mb-4
-            p-4
-            rounded-2xl
-            border
-            border-cyan-500/10
-            bg-gradient-to-br
-            from-cyan-500/10
-            to-blue-500/5
+            mb-3
+            px-3
+            text-[9px]
+            font-bold
+            uppercase
+            tracking-[0.18em]
+            text-slate-500
           "
         >
-          <div className="flex items-center gap-3">
-            <div
-              className="
-                flex
-                items-center
-                justify-center
-                w-9
-                h-9
-                rounded-xl
-                bg-cyan-500/10
-                border
-                border-cyan-400/10
-              "
-            >
-              <Activity
-                size={17}
-                className="text-cyan-400"
-              />
-            </div>
+          Workspace
+        </p>
 
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-200">
-                  System Protected
-                </span>
+        <div className="space-y-1.5">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = active === item.name;
 
-                <span className="relative flex h-2 w-2">
+            return (
+              <button
+                key={item.name}
+                type="button"
+                onClick={() => navigate(item.path)}
+                className={`
+                  group
+                  relative
+                  flex
+                  h-14
+                  w-full
+                  items-center
+                  gap-3
+                  rounded-xl
+                  px-3
+                  text-left
+                  transition-all
+                  duration-200
+                  ${
+                    isActive
+                      ? "bg-linear-to-r from-cyan-300 to-cyan-400 text-[#08203d] shadow-lg shadow-cyan-400/20"
+                      : "text-slate-300 hover:bg-white/[0.07] hover:text-white"
+                  }
+                `}
+              >
+                {isActive && (
                   <span
                     className="
                       absolute
-                      inline-flex
-                      h-full
-                      w-full
-                      rounded-full
-                      bg-emerald-400
-                      opacity-75
-                      animate-ping
+                      left-0
+                      top-1/2
+                      h-7
+                      w-1
+                      -translate-y-1/2
+                      rounded-r-full
+                      bg-white
                     "
                   />
+                )}
 
-                  <span
-                    className="
-                      relative
-                      inline-flex
-                      h-2
-                      w-2
-                      rounded-full
-                      bg-emerald-400
-                    "
+                <span
+                  className={`
+                    flex
+                    h-9
+                    w-9
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-lg
+                    ${
+                      isActive
+                        ? "bg-white/30"
+                        : "bg-white/6 group-hover:bg-white/10"
+                    }
+                  `}
+                >
+                  <Icon
+                    size={18}
+                    strokeWidth={
+                      isActive ? 2.4 : 1.9
+                    }
                   />
                 </span>
-              </div>
 
-              <p className="mt-1 text-[10px] text-slate-500">
-                Detection engine online
-              </p>
+                <span className="truncate text-[13px] font-semibold">
+                  {item.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* =====================================================
+          BOTTOM AREA
+      ===================================================== */}
+
+      <div
+        className="
+          shrink-0
+          border-t
+          border-white/10
+          bg-[#0b1f3a]
+          p-3
+        "
+      >
+        {/* MADE IN INDIA */}
+
+        <div
+          className="
+            mb-3
+            rounded-xl
+            border
+            border-white/10
+            bg-white/5
+            px-3
+            py-3
+          "
+        >
+          <div className="flex items-center gap-2">
+            <div className="flex overflow-hidden rounded-full">
+              <span className="h-1 w-4 bg-orange-400" />
+              <span className="h-1 w-4 bg-white" />
+              <span className="h-1 w-4 bg-green-500" />
             </div>
+
+            <span className="text-[9px] font-semibold text-slate-400">
+              Made in India
+            </span>
           </div>
+
+          <p className="mt-2 text-[9px] leading-4 text-slate-500">
+            AI security built for a safer future.
+          </p>
         </div>
 
-        {/* Logout */}
+        {/* LOGOUT */}
 
         <button
+          type="button"
           onClick={handleLogout}
           className="
             group
-            w-full
             flex
+            h-13
+            w-full
             items-center
             gap-3
-            px-4
-            py-3.5
-            rounded-2xl
+            rounded-xl
+            px-3
+            text-left
             text-slate-400
             transition-all
-            duration-300
+            duration-200
             hover:bg-red-500/10
-            hover:text-red-400
+            hover:text-red-300
           "
         >
           <span
             className="
               flex
+              h-9
+              w-9
+              shrink-0
               items-center
               justify-center
-              w-9
-              h-9
-              rounded-xl
-              bg-slate-800/70
-              transition-all
-              duration-300
-              group-hover:bg-red-500/15
+              rounded-lg
+              bg-white/6
+              group-hover:bg-red-500/10
             "
           >
             <LogOut size={18} />
           </span>
 
-          <span className="text-sm font-medium">
+          <span className="text-[13px] font-semibold">
             Logout
           </span>
         </button>

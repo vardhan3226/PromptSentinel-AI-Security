@@ -1,194 +1,161 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, ShieldCheck } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
 
   const closeMenu = () => {
     setMobileOpen(false);
   };
 
-  return (
-    <motion.header
-      initial={{ y: -80, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.7, ease: "easeOut" }}
-      className="fixed top-0 left-0 right-0 z-50"
-    >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4">
+  const links = [
+    { label: "Home", path: "/home" },
+    { label: "Features", path: "/features" },
+    { label: "How It Works", path: "/how-it-works" },
+    { label: "About", path: "/about" },
+    { label: "Technology", path: "/technology" },
+  ];
 
-        <nav className="relative flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 shadow-2xl backdrop-blur-2xl sm:px-6">
+  return (
+    <header className="fixed left-0 right-0 top-0 z-50">
+
+      <div className="mx-auto max-w-7xl px-5 pt-4 sm:px-8">
+
+        <nav className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-white/90 px-5 py-3 shadow-[0_8px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl">
 
           {/* Logo */}
 
           <Link
             to="/home"
             onClick={closeMenu}
-            className="flex items-center gap-3 group"
+            className="flex items-center gap-3"
           >
-            <motion.div
-              whileHover={{ rotate: 5, scale: 1.05 }}
-              transition={{ duration: 0.2 }}
-              className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-400/10"
-            >
+
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-blue-100 bg-blue-50">
               <ShieldCheck
                 size={25}
-                className="text-cyan-400"
+                className="text-blue-600"
               />
-            </motion.div>
+            </div>
 
-            <div className="leading-none">
-              <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl">
-                Prompt<span className="text-cyan-400">Sentinel</span>
-              </h1>
+            <div>
 
-              <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.25em] text-slate-500">
+              <p className="text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">
+                Prompt<span className="text-blue-600">Sentinel</span>
+              </p>
+
+              <p className="text-[8px] font-semibold uppercase tracking-[0.24em] text-slate-400">
                 AI Security Platform
               </p>
+
             </div>
+
           </Link>
 
-          {/* Desktop Navigation */}
+          {/* Desktop links */}
 
-          <div className="hidden items-center gap-8 md:flex">
+          <div className="hidden items-center gap-7 lg:flex">
 
-            <a
-              href="#home"
-              className="text-sm font-medium text-slate-300 transition hover:text-cyan-400"
-            >
-              Home
-            </a>
+            {links.map((link) => {
+              const active = location.pathname === link.path;
 
-            <a
-              href="#features"
-              className="text-sm font-medium text-slate-300 transition hover:text-cyan-400"
-            >
-              Features
-            </a>
-
-            <a
-              href="#workflow"
-              className="text-sm font-medium text-slate-300 transition hover:text-cyan-400"
-            >
-              How It Works
-            </a>
-
-            <a
-              href="#technology"
-              className="text-sm font-medium text-slate-300 transition hover:text-cyan-400"
-            >
-              Technology
-            </a>
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                    active
+                      ? "bg-blue-50 text-blue-600"
+                      : "text-slate-700 hover:bg-slate-50 hover:text-blue-600"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
 
           </div>
 
-          {/* Desktop Actions */}
+          {/* Actions */}
 
-          <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden items-center gap-3 sm:flex">
 
             <Link
               to="/login"
-              className="rounded-xl border border-cyan-400/30 px-4 py-2.5 text-sm font-semibold text-cyan-400 transition hover:border-cyan-400 hover:bg-cyan-400/10"
+              className="rounded-xl border border-blue-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 transition hover:border-blue-400 hover:text-blue-600"
             >
               Login
             </Link>
 
             <Link
               to="/register"
-              className="rounded-xl bg-cyan-400 px-5 py-2.5 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-400/20 transition hover:bg-cyan-300 hover:shadow-cyan-400/30"
+              className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/15 transition hover:bg-blue-700"
             >
               Get Started
             </Link>
 
           </div>
 
-          {/* Mobile Button */}
+          {/* Mobile */}
 
           <button
             type="button"
-            onClick={() => setMobileOpen((prev) => !prev)}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-400/40 hover:text-cyan-400 md:hidden"
-            aria-label="Toggle navigation"
-            aria-expanded={mobileOpen}
+            onClick={() => setMobileOpen((value) => !value)}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-700 sm:hidden"
           >
-            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+            {mobileOpen ? (
+              <X size={21} />
+            ) : (
+              <Menu size={21} />
+            )}
           </button>
 
-          {/* Mobile Navigation */}
-
-          <AnimatePresence>
-            {mobileOpen && (
-              <motion.div
-                initial={{ opacity: 0, height: 0, y: -10 }}
-                animate={{ opacity: 1, height: "auto", y: 0 }}
-                exit={{ opacity: 0, height: 0, y: -10 }}
-                transition={{ duration: 0.25 }}
-                className="absolute left-0 right-0 top-[calc(100%+10px)] overflow-hidden rounded-2xl border border-white/10 bg-slate-950/95 p-4 shadow-2xl backdrop-blur-2xl md:hidden"
-              >
-
-                <div className="flex flex-col gap-2">
-
-                  <a
-                    href="#home"
-                    onClick={closeMenu}
-                    className="rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-cyan-400/10 hover:text-cyan-400"
-                  >
-                    Home
-                  </a>
-
-                  <a
-                    href="#features"
-                    onClick={closeMenu}
-                    className="rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-cyan-400/10 hover:text-cyan-400"
-                  >
-                    Features
-                  </a>
-
-                  <a
-                    href="#workflow"
-                    onClick={closeMenu}
-                    className="rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-cyan-400/10 hover:text-cyan-400"
-                  >
-                    How It Works
-                  </a>
-
-                  <a
-                    href="#technology"
-                    onClick={closeMenu}
-                    className="rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-cyan-400/10 hover:text-cyan-400"
-                  >
-                    Technology
-                  </a>
-
-                  <div className="my-2 h-px bg-white/10" />
-
-                  <Link
-                    to="/login"
-                    onClick={closeMenu}
-                    className="rounded-xl border border-cyan-400/20 px-4 py-3 text-center text-sm font-semibold text-cyan-400 transition hover:bg-cyan-400/10"
-                  >
-                    Login
-                  </Link>
-
-                  <Link
-                    to="/register"
-                    onClick={closeMenu}
-                    className="rounded-xl bg-cyan-400 px-4 py-3 text-center text-sm font-bold text-slate-950 transition hover:bg-cyan-300"
-                  >
-                    Get Started
-                  </Link>
-
-                </div>
-
-              </motion.div>
-            )}
-          </AnimatePresence>
-
         </nav>
+
+        {mobileOpen && (
+          <div className="mt-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl sm:hidden">
+
+            <div className="flex flex-col gap-1">
+
+              {links.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  onClick={closeMenu}
+                  className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  {link.label}
+                </Link>
+              ))}
+
+              <div className="my-2 h-px bg-slate-100" />
+
+              <Link
+                to="/login"
+                onClick={closeMenu}
+                className="rounded-xl border border-blue-200 px-4 py-3 text-center text-sm font-semibold text-blue-600"
+              >
+                Login
+              </Link>
+
+              <Link
+                to="/register"
+                onClick={closeMenu}
+                className="rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-bold text-white"
+              >
+                Get Started
+              </Link>
+
+            </div>
+
+          </div>
+        )}
+
       </div>
-    </motion.header>
+
+    </header>
   );
 }
 

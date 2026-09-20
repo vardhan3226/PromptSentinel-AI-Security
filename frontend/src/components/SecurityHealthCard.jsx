@@ -5,31 +5,17 @@ import {
 } from "lucide-react";
 
 function SecurityHealthCard({ stats }) {
-  const total = stats.totalScans || 0;
+  const total = stats?.totalScans || 0;
 
-  const safe = stats.safePrompts || 0;
-  const low = stats.lowRiskPrompts || 0;
-  const medium = stats.mediumRiskPrompts || 0;
-  const high = stats.highRiskPrompts || 0;
-  const critical = stats.criticalRiskPrompts || 0;
+  const safe = stats?.safePrompts || 0;
+  const low = stats?.lowRiskPrompts || 0;
+  const medium = stats?.mediumRiskPrompts || 0;
+  const high = stats?.highRiskPrompts || 0;
+  const critical = stats?.criticalRiskPrompts || 0;
 
   let score = 0;
 
   if (total > 0) {
-    /*
-     * Security Score Calculation
-     *
-     * Safe prompts      = 100%
-     * Low risk prompts  = 80%
-     * Medium risk       = 55%
-     * High risk         = 25%
-     * Critical risk     = 0%
-     *
-     * The final score represents the
-     * overall security condition of
-     * scanned prompts.
-     */
-
     const weightedScore =
       safe * 100 +
       low * 80 +
@@ -37,165 +23,205 @@ function SecurityHealthCard({ stats }) {
       high * 25 +
       critical * 0;
 
-    score = Math.round(
-      weightedScore / total
-    );
+    score = Math.round(weightedScore / total);
   }
 
   let status = "No Data";
-  let color = "text-slate-400";
-  let progress = "bg-slate-500";
+  let statusColor = "text-slate-400";
+  let statusBg = "bg-slate-100";
+  let progressColor = "bg-slate-400";
 
   if (total > 0 && score >= 90) {
     status = "Excellent";
-    color = "text-green-400";
-    progress = "bg-green-500";
+    statusColor = "text-green-600";
+    statusBg = "bg-green-50";
+    progressColor = "bg-green-500";
   } else if (total > 0 && score >= 75) {
     status = "Good";
-    color = "text-cyan-400";
-    progress = "bg-cyan-500";
+    statusColor = "text-blue-600";
+    statusBg = "bg-blue-50";
+    progressColor = "bg-blue-500";
   } else if (total > 0 && score >= 50) {
     status = "Warning";
-    color = "text-yellow-400";
-    progress = "bg-yellow-500";
+    statusColor = "text-yellow-600";
+    statusBg = "bg-yellow-50";
+    progressColor = "bg-yellow-500";
   } else if (total > 0) {
     status = "Critical";
-    color = "text-red-400";
-    progress = "bg-red-500";
+    statusColor = "text-red-600";
+    statusBg = "bg-red-50";
+    progressColor = "bg-red-500";
   }
 
-  const highRiskFindings =
-    high + critical;
+  const highRiskFindings = high + critical;
 
   return (
-    <div className="bg-slate-900 border border-cyan-500/20 rounded-3xl p-8 shadow-lg">
+    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+
+      {/* TOP ACCENT */}
+
+      <div
+        className={`absolute left-0 top-0 h-1 w-full ${progressColor}`}
+      />
 
       {/* HEADER */}
 
-      <div className="flex justify-between items-center">
+      <div className="flex items-start justify-between gap-4">
 
         <div>
 
-          <h2 className="text-3xl font-bold text-white">
-            Security Health
-          </h2>
+          <div className="flex items-center gap-3">
 
-          <p className="text-slate-400 mt-2">
-            Overall prompt security based on scan results
-          </p>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50">
+              <ShieldCheck
+                size={22}
+                className="text-blue-600"
+              />
+            </div>
+
+            <div>
+
+              <h2 className="text-xl font-bold tracking-tight text-slate-900">
+                Security Health
+              </h2>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Overall prompt security status
+              </p>
+
+            </div>
+
+          </div>
 
         </div>
 
-        <ShieldCheck
-          size={48}
-          className={color}
-        />
+        <div
+          className={`rounded-full px-3 py-1.5 text-xs font-bold ${statusBg} ${statusColor}`}
+        >
+          {status}
+        </div>
 
       </div>
 
+      {/* SCORE */}
 
-      {/* SECURITY SCORE */}
+      <div className="mt-7 rounded-2xl border border-slate-100 bg-slate-50 p-5">
 
-      <div className="mt-8">
+        <div className="flex items-end justify-between">
 
-        <div className="flex justify-between items-center">
+          <div>
 
-          <span className="text-slate-400">
-            Security Score
-          </span>
+            <p className="text-sm font-medium text-slate-500">
+              Security Score
+            </p>
 
-          <span
-            className={`font-bold text-3xl ${color}`}
-          >
-            {score}%
-          </span>
+            <p className={`mt-1 text-4xl font-black ${statusColor}`}>
+              {score}%
+            </p>
+
+          </div>
+
+          <Activity
+            size={28}
+            className={statusColor}
+          />
 
         </div>
 
-        <div className="w-full bg-slate-700 rounded-full h-4 mt-4 overflow-hidden">
+        <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-200">
 
           <div
-            className={`${progress} h-4 rounded-full transition-all duration-700`}
+            className={`h-full rounded-full transition-all duration-700 ${progressColor}`}
             style={{
-              width: `${score}%`,
+              width: `${Math.min(
+                Math.max(score, 0),
+                100
+              )}%`,
             }}
           />
 
         </div>
 
+        <div className="mt-2 flex justify-between text-[10px] text-slate-400">
+          <span>0</span>
+          <span>50</span>
+          <span>75</span>
+          <span>100</span>
+        </div>
+
       </div>
 
+      {/* INFORMATION */}
 
-      {/* INFORMATION CARDS */}
+      <div className="mt-5 grid grid-cols-2 gap-4">
 
-      <div className="grid grid-cols-2 gap-5 mt-8">
+        {/* HIGH RISK */}
 
-        {/* HIGH RISK FINDINGS */}
+        <div className="rounded-2xl border border-red-100 bg-red-50/60 p-4">
 
-        <div className="bg-slate-950 rounded-xl p-5">
+          <div className="flex items-center justify-between">
 
-          <ShieldAlert
-            className="text-red-400 mb-3"
-          />
+            <p className="text-xs font-medium text-slate-500">
+              High-Risk Findings
+            </p>
 
-          <p className="text-slate-400">
-            High-Risk Findings
-          </p>
+            <ShieldAlert
+              size={19}
+              className="text-red-500"
+            />
 
-          <h3 className="text-2xl font-bold mt-2 text-white">
+          </div>
+
+          <p className="mt-2 text-2xl font-black text-red-600">
             {highRiskFindings}
-          </h3>
+          </p>
 
-          <p className="text-xs text-slate-500 mt-2">
-            High + Critical scans
+          <p className="mt-1 text-[10px] text-slate-400">
+            High + Critical
           </p>
 
         </div>
 
+        {/* SCANS */}
 
-        {/* STATUS */}
+        <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
 
-        <div className="bg-slate-950 rounded-xl p-5">
+          <div className="flex items-center justify-between">
 
-          <Activity
-            className={`${color} mb-3`}
-          />
+            <p className="text-xs font-medium text-slate-500">
+              Total Scans
+            </p>
 
-          <p className="text-slate-400">
-            Status
+            <Activity
+              size={19}
+              className="text-blue-500"
+            />
+
+          </div>
+
+          <p className="mt-2 text-2xl font-black text-blue-600">
+            {total}
           </p>
 
-          <h3
-            className={`text-2xl font-bold mt-2 ${color}`}
-          >
-            {status}
-          </h3>
-
-          <p className="text-xs text-slate-500 mt-2">
-            Based on {total} scan
-            {total === 1 ? "" : "s"}
+          <p className="mt-1 text-[10px] text-slate-400">
+            Security analyses
           </p>
 
         </div>
 
       </div>
 
-
-      {/* NO DATA MESSAGE */}
+      {/* EMPTY STATE */}
 
       {total === 0 && (
+        <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
 
-        <div className="mt-6 bg-slate-950 border border-slate-800 rounded-xl p-4 text-center">
-
-          <p className="text-slate-400 text-sm">
-
+          <p className="text-xs text-slate-500">
             Run your first prompt scan to generate
             security health data.
-
           </p>
 
         </div>
-
       )}
 
     </div>

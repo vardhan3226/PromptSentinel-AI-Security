@@ -1,82 +1,142 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import {
+  BarChart3,
+  RefreshCw,
+  ShieldCheck,
+} from "lucide-react";
+
 import Sidebar from "../../components/Sidebar";
 import AnalyticsChart from "../../components/AnalyticsChart";
 
-import {
-  BarChart3,
-  ShieldCheck,
-  ShieldAlert,
-  Activity,
-} from "lucide-react";
-
-function AnalyticsPage() {
+function Analytics() {
   const navigate = useNavigate();
 
-  const [stats, setStats] = useState({
-    totalScans: 0,
-    safePrompts: 0,
-    lowRiskPrompts: 0,
-    mediumRiskPrompts: 0,
-    highRiskPrompts: 0,
-    criticalRiskPrompts: 0,
-    threatsBlocked: 0,
-    highRiskFindings: 0,
-    averageRiskScore: 0,
-    safePromptRate: 0,
-    attackTypeDistribution: [],
-  });
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  /*
-  |--------------------------------------------------------------------------
-  | LOAD ANALYTICS STATISTICS
-  |--------------------------------------------------------------------------
-  */
-
-  useEffect(() => {
-    const loadStats = async () => {
-      try {
-        const token = localStorage.getItem("token");
-
-        const response = await fetch(
-          "http://localhost:5000/api/dashboard/stats",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        const data = await response.json();
-
-        if (data.success) {
-          setStats(data.stats);
-        }
-      } catch (error) {
-        console.error(
-          "Failed to fetch analytics statistics:",
-          error
-        );
-      }
-    };
-
-    loadStats();
-  }, []);
-
-  /*
-  |--------------------------------------------------------------------------
-  | LOGOUT
-  |--------------------------------------------------------------------------
-  */
+  // ==================================================
+  // LOGOUT
+  // ==================================================
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("user");
+    localStorage.removeItem("currentUser");
+
     navigate("/login");
   };
 
+  // ==================================================
+  // LOAD ANALYTICS
+  // ==================================================
+
+  const loadAnalytics = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await fetch(
+        "http://localhost:5000/api/dashboard/stats",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (
+        response.status === 401 ||
+        response.status === 403
+      ) {
+        localStorage.removeItem("token");
+        navigate("/login");
+        return;
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.stats) {
+        setStats(data.stats);
+      }
+    } catch (error) {
+      console.error(
+        "Analytics error:",
+        error
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAnalytics();
+  }, []);
+
+  // ==================================================
+  // STATISTICS
+  // ==================================================
+
+  const totalScans = Number(
+    stats?.totalScans || 0
+  );
+
+  const safePrompts = Number(
+    stats?.safePrompts || 0
+  );
+
+  const highRiskFindings = Number(
+    stats?.highRiskFindings ||
+      (
+        Number(
+          stats?.highRiskPrompts || 0
+        ) +
+        Number(
+          stats?.criticalRiskPrompts || 0
+        )
+      )
+  );
+
+  const averageRisk = Number(
+    stats?.averageRiskScore || 0
+  );
+
+  const safeRate =
+    totalScans > 0
+      ? Math.round(
+          (safePrompts / totalScans) *
+            100
+        )
+      : 0;
+
+  const highRiskRate =
+    totalScans > 0
+      ? Math.round(
+          (highRiskFindings /
+            totalScans) *
+            100
+        )
+      : 0;
+
+  // ==================================================
+  // PAGE
+  // ==================================================
+
   return (
-    <div className="flex min-h-screen bg-slate-950 text-white">
+    <div className="min-h-dvh w-full overflow-x-hidden bg-[#f5f8fc]">
+
+      {/* ==================================================
+          SIDEBAR
+      ================================================== */}
 
       <Sidebar
         active="Analytics"
@@ -84,137 +144,505 @@ function AnalyticsPage() {
         handleLogout={handleLogout}
       />
 
-      <div className="flex-1 p-8 overflow-y-auto">
+      {/* ==================================================
+          MAIN PAGE
 
-        {/* =====================================================
-            PAGE HEADER
-        ====================================================== */}
+          Sidebar = 260px
+          Main automatically uses remaining width
+      ================================================== */}
 
-        <div className="bg-slate-900 rounded-3xl border border-cyan-500/20 p-8">
+      <main
+        className="
+          ml-[260px]
+          min-h-dvh
+          w-auto
+          max-w-none
+          overflow-x-hidden
+          box-border
+        "
+      >
 
-          <div className="flex justify-between items-center">
+        <div
+          className="
+            box-border
+            min-w-0
+            w-full
+            px-5
+            py-5
+            md:px-7
+            lg:px-8
+          "
+        >
 
-            <div>
+          {/* ==================================================
+              HEADER
+          ================================================== */}
 
-              <h1 className="text-4xl font-bold">
-                Security Analytics
-              </h1>
+          <section
+            className="
+              mb-5
+              box-border
+              w-full
+              min-w-0
+              rounded-3xl
+              border
+              border-slate-200
+              bg-white
+              px-6
+              py-6
+              shadow-sm
+            "
+          >
 
-              <p className="text-slate-400 mt-2">
-                AI Prompt Security Statistics & Threat Insights
+            <div className="flex items-center gap-3">
+
+              <div
+                className="
+                  flex
+                  h-11
+                  w-11
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-blue-50
+                "
+              >
+                <BarChart3
+                  size={21}
+                  className="text-blue-600"
+                />
+              </div>
+
+              <div className="min-w-0">
+
+                <h1
+                  className="
+                    text-2xl
+                    font-extrabold
+                    tracking-tight
+                    text-[#102a63]
+                  "
+                >
+                  Threat Analytics
+                </h1>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Security insights from your PromptSentinel scans.
+                </p>
+
+              </div>
+
+            </div>
+
+          </section>
+
+          {/* ==================================================
+              STAT CARDS
+          ================================================== */}
+
+          <section
+            className="
+              mb-5
+              grid
+              min-w-0
+              w-full
+              grid-cols-1
+              gap-4
+              sm:grid-cols-2
+              xl:grid-cols-4
+            "
+          >
+
+            {/* TOTAL SCANS */}
+
+            <div
+              className="
+                min-w-0
+                rounded-[20px]
+                border
+                border-slate-200
+                bg-white
+                p-5
+                shadow-sm
+              "
+            >
+
+              <p
+                className="
+                  text-xs
+                  font-semibold
+                  uppercase
+                  tracking-wide
+                  text-slate-400
+                "
+              >
+                Total Scans
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-3xl
+                  font-extrabold
+                  text-blue-600
+                "
+              >
+                {totalScans}
               </p>
 
             </div>
 
-            <BarChart3
-              size={55}
-              className="text-cyan-400"
-            />
+            {/* SAFE PROMPTS */}
+
+            <div
+              className="
+                min-w-0
+                rounded-[20px]
+                border
+                border-slate-200
+                bg-white
+                p-5
+                shadow-sm
+              "
+            >
+
+              <p
+                className="
+                  text-xs
+                  font-semibold
+                  uppercase
+                  tracking-wide
+                  text-slate-400
+                "
+              >
+                Safe Prompts
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-3xl
+                  font-extrabold
+                  text-emerald-600
+                "
+              >
+                {safePrompts}
+              </p>
+
+            </div>
+
+            {/* HIGH RISK */}
+
+            <div
+              className="
+                min-w-0
+                rounded-[20px]
+                border
+                border-slate-200
+                bg-white
+                p-5
+                shadow-sm
+              "
+            >
+
+              <p
+                className="
+                  text-xs
+                  font-semibold
+                  uppercase
+                  tracking-wide
+                  text-slate-400
+                "
+              >
+                High-Risk Findings
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-3xl
+                  font-extrabold
+                  text-red-600
+                "
+              >
+                {highRiskFindings}
+              </p>
+
+            </div>
+
+            {/* AVERAGE RISK */}
+
+            <div
+              className="
+                min-w-0
+                rounded-[20px]
+                border
+                border-slate-200
+                bg-white
+                p-5
+                shadow-sm
+              "
+            >
+
+              <p
+                className="
+                  text-xs
+                  font-semibold
+                  uppercase
+                  tracking-wide
+                  text-slate-400
+                "
+              >
+                Average Risk
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-3xl
+                  font-extrabold
+                  text-violet-600
+                "
+              >
+                {averageRisk}
+              </p>
+
+            </div>
+
+          </section>
+
+          {/* ==================================================
+              CHART
+          ================================================== */}
+
+          <section
+            className="
+              w-full
+              min-w-0
+              overflow-hidden
+              rounded-[20px]
+              border
+              border-slate-200
+              bg-white
+              shadow-sm
+            "
+          >
+
+            {loading ? (
+
+              <div
+                className="
+                  flex
+                  min-h-[400px]
+                  items-center
+                  justify-center
+                "
+              >
+
+                <RefreshCw
+                  size={26}
+                  className="
+                    animate-spin
+                    text-blue-600
+                  "
+                />
+
+              </div>
+
+            ) : (
+
+              <AnalyticsChart
+                stats={stats || {}}
+              />
+
+            )}
+
+          </section>
+
+          {/* ==================================================
+              SUMMARY CARDS
+          ================================================== */}
+
+          <section
+            className="
+              mt-5
+              grid
+              w-full
+              grid-cols-1
+              gap-4
+              md:grid-cols-2
+            "
+          >
+
+            {/* SAFE RATE */}
+
+            <div
+              className="
+                min-w-0
+                rounded-[20px]
+                border
+                border-slate-200
+                bg-white
+                p-5
+                shadow-sm
+              "
+            >
+
+              <div className="flex items-center gap-3">
+
+                <div
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-emerald-50
+                  "
+                >
+                  <ShieldCheck
+                    size={20}
+                    className="text-emerald-600"
+                  />
+                </div>
+
+                <div className="min-w-0">
+
+                  <h2 className="font-bold text-slate-800">
+                    Safe Prompt Rate
+                  </h2>
+
+                  <p className="text-xs text-slate-400">
+                    Safe scans relative to total scans.
+                  </p>
+
+                </div>
+
+              </div>
+
+              <p
+                className="
+                  mt-5
+                  text-4xl
+                  font-extrabold
+                  text-emerald-600
+                "
+              >
+                {safeRate}%
+              </p>
+
+            </div>
+
+            {/* HIGH RISK RATE */}
+
+            <div
+              className="
+                min-w-0
+                rounded-[20px]
+                border
+                border-slate-200
+                bg-white
+                p-5
+                shadow-sm
+              "
+            >
+
+              <div className="flex items-center gap-3">
+
+                <div
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-red-50
+                  "
+                >
+                  <BarChart3
+                    size={20}
+                    className="text-red-600"
+                  />
+                </div>
+
+                <div className="min-w-0">
+
+                  <h2 className="font-bold text-slate-800">
+                    High-Risk Rate
+                  </h2>
+
+                  <p className="text-xs text-slate-400">
+                    High and critical findings.
+                  </p>
+
+                </div>
+
+              </div>
+
+              <p
+                className="
+                  mt-5
+                  text-4xl
+                  font-extrabold
+                  text-red-600
+                "
+              >
+                {highRiskRate}%
+              </p>
+
+            </div>
+
+          </section>
+
+          {/* ==================================================
+              FOOTER
+          ================================================== */}
+
+          <div
+            className="
+              flex
+              items-center
+              justify-center
+              gap-3
+              py-5
+            "
+          >
+
+            <div
+              className="
+                flex
+                overflow-hidden
+                rounded-full
+              "
+            >
+              <span className="h-1.5 w-5 bg-orange-500" />
+              <span className="h-1.5 w-5 bg-slate-200" />
+              <span className="h-1.5 w-5 bg-green-600" />
+            </div>
+
+            <span
+              className="
+                text-xs
+                font-semibold
+                text-slate-400
+              "
+            >
+              PromptSentinel · Made in India
+            </span>
 
           </div>
 
         </div>
 
-        {/* =====================================================
-            STATISTICS CARDS
-        ====================================================== */}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mt-8">
-
-          {/* TOTAL SCANS */}
-
-          <div className="bg-slate-900 border border-cyan-500/20 rounded-2xl p-6">
-
-            <Activity
-              className="text-cyan-400 mb-4"
-              size={34}
-            />
-
-            <p className="text-slate-400">
-              Total Scans
-            </p>
-
-            <h2 className="text-4xl font-bold mt-2">
-              {stats.totalScans}
-            </h2>
-
-          </div>
-
-          {/* SAFE PROMPTS */}
-
-          <div className="bg-slate-900 border border-green-500/20 rounded-2xl p-6">
-
-            <ShieldCheck
-              className="text-green-400 mb-4"
-              size={34}
-            />
-
-            <p className="text-slate-400">
-              Safe Prompts
-            </p>
-
-            <h2 className="text-4xl font-bold text-green-400 mt-2">
-              {stats.safePrompts}
-            </h2>
-
-          </div>
-
-          {/* HIGH RISK PROMPTS */}
-
-          <div className="bg-slate-900 border border-red-500/20 rounded-2xl p-6">
-
-            <ShieldAlert
-              className="text-red-400 mb-4"
-              size={34}
-            />
-
-            <p className="text-slate-400">
-              High Risk
-            </p>
-
-            <h2 className="text-4xl font-bold text-red-400 mt-2">
-              {stats.highRiskPrompts}
-            </h2>
-
-          </div>
-
-          {/* THREATS BLOCKED */}
-
-          <div className="bg-slate-900 border border-yellow-500/20 rounded-2xl p-6">
-
-            <ShieldAlert
-              className="text-yellow-400 mb-4"
-              size={34}
-            />
-
-            <p className="text-slate-400">
-              Threats Blocked
-            </p>
-
-            <h2 className="text-4xl font-bold text-yellow-400 mt-2">
-              {stats.threatsBlocked}
-            </h2>
-
-          </div>
-
-        </div>
-
-        {/* =====================================================
-            ANALYTICS CHARTS
-        ====================================================== */}
-
-        <div className="mt-10">
-
-          <AnalyticsChart
-            stats={stats}
-          />
-
-        </div>
-
-      </div>
+      </main>
 
     </div>
   );
 }
 
-export default AnalyticsPage;
+export default Analytics;

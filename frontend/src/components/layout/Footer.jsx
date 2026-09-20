@@ -1,82 +1,64 @@
-import { Shield, Mail, Globe } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 
 function Footer() {
   return (
-    <footer className="bg-slate-950 border-t border-cyan-400/10">
-      <div className="max-w-7xl mx-auto px-8 py-16">
-        <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-10">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-cyan-500 flex items-center justify-center">
-                <Shield className="text-slate-950" size={24} />
-              </div>
+    <footer className="border-t border-slate-200 bg-white">
 
-              <div>
-                <h2 className="text-2xl font-bold text-white">
-                  PromptSentinel
-                </h2>
-                <p className="text-cyan-400 text-sm">
-                  AI Firewall for LLMs
-                </p>
-              </div>
+      <div className="mx-auto max-w-7xl px-6 py-8 sm:px-8 lg:px-10">
+
+        <div className="flex flex-col items-center justify-between gap-5 sm:flex-row">
+
+          {/* Brand */}
+
+          <div className="flex items-center gap-3">
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50">
+              <ShieldCheck
+                size={21}
+                className="text-blue-600"
+              />
             </div>
 
-            <p className="mt-6 text-slate-400 leading-7">
-              PromptSentinel protects Large Language Models against prompt
-              injection, jailbreak attacks and prompt leakage.
-            </p>
-          </div>
+            <div>
 
-          <div>
-            <h3 className="text-white text-xl font-semibold mb-5">Product</h3>
-            <ul className="space-y-3 text-slate-400">
-              <li>Features</li>
-              <li>Live Scanner</li>
-              <li>Dashboard</li>
-              <li>Reports</li>
-            </ul>
-          </div>
+              <p className="text-sm font-bold text-slate-900">
+                Prompt<span className="text-blue-600">Sentinel</span>
+              </p>
 
-          <div>
-            <h3 className="text-white text-xl font-semibold mb-5">
-              Technologies
-            </h3>
-            <ul className="space-y-3 text-slate-400">
-              <li>React</li>
-              <li>Node.js</li>
-              <li>Express.js</li>
-              <li>MongoDB</li>
-            </ul>
-          </div>
+              <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                AI Security Platform
+              </p>
 
-          <div>
-            <h3 className="text-white text-xl font-semibold mb-5">Contact</h3>
-
-            <div className="space-y-4 text-slate-400">
-              <div className="flex items-center gap-3">
-                <Mail size={18} />
-                <span>support@promptsentinel.ai</span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="text-lg">🐙</span>
-                <span>GitHub Repository</span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Globe size={18} />
-                <span>www.promptsentinel.ai</span>
-              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="border-t border-slate-800 mt-14 pt-8 text-center">
-          <p className="text-slate-500">
-            © 2026 PromptSentinel. All rights reserved.
+          </div>
+
+          {/* Made in India */}
+
+          <div className="flex items-center gap-3">
+
+            <div className="flex overflow-hidden rounded-full">
+              <span className="h-1.5 w-5 bg-orange-500" />
+              <span className="h-1.5 w-5 bg-slate-200" />
+              <span className="h-1.5 w-5 bg-green-600" />
+            </div>
+
+            <span className="text-xs font-semibold text-slate-500">
+              Made in India
+            </span>
+
+          </div>
+
+          {/* Copyright */}
+
+          <p className="text-xs text-slate-400">
+            © 2026 PromptSentinel
           </p>
+
         </div>
+
       </div>
+
     </footer>
   );
 }

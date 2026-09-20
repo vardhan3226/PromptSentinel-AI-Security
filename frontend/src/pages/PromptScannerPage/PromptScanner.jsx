@@ -59,10 +59,12 @@ function PromptScannerPage() {
         "http://localhost:5000/api/scan",
         {
           method: "POST",
+
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
+
           body: JSON.stringify({
             prompt: prompt.trim(),
           }),
@@ -87,7 +89,7 @@ function PromptScannerPage() {
 
       /*
       |--------------------------------------------------------------------------
-      | TOKEN EXPIRED OR INVALID
+      | SESSION ERROR
       |--------------------------------------------------------------------------
       */
 
@@ -99,23 +101,24 @@ function PromptScannerPage() {
 
         alert(
           data?.message ||
-          "Your session has expired. Please login again."
+            "Your session has expired. Please login again."
         );
 
         navigate("/login");
+
         return;
       }
 
       /*
       |--------------------------------------------------------------------------
-      | OTHER BACKEND ERRORS
+      | BACKEND ERROR
       |--------------------------------------------------------------------------
       */
 
       if (!response.ok) {
         alert(
           data?.message ||
-          "Unable to scan the prompt. Please try again."
+            "Unable to scan the prompt. Please try again."
         );
 
         return;
@@ -123,7 +126,7 @@ function PromptScannerPage() {
 
       /*
       |--------------------------------------------------------------------------
-      | SUCCESSFUL SCAN
+      | SUCCESS
       |--------------------------------------------------------------------------
       */
 
@@ -132,207 +135,549 @@ function PromptScannerPage() {
       } else {
         alert(
           data.message ||
-          "Scan failed. Please try again."
+            "Scan failed. Please try again."
         );
       }
-
     } catch (error) {
       console.error("Scan Error:", error);
 
       alert(
         error.message ||
-        "Unable to connect to the server."
+          "Unable to connect to the server."
       );
-
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-slate-50">
 
-      {/* SIDEBAR */}
+      {/* ================================================================= */}
+      {/* DESKTOP LAYOUT                                                    */}
+      {/* ================================================================= */}
 
-      <Sidebar
-        active="Prompt Scanner"
-        navigate={navigate}
-        handleLogout={handleLogout}
-      />
+      <div className="lg:grid lg:grid-cols-[300px_minmax(0,1fr)]">
 
-      {/* MAIN CONTENT */}
+        {/* =============================================================== */}
+        {/* SIDEBAR                                                         */}
+        {/* =============================================================== */}
 
-      <main className="flex-1 overflow-y-auto">
+        <aside className="relative z-30">
 
-        <div className="max-w-7xl mx-auto p-6 md:p-8 lg:p-10">
+          <Sidebar
+            active="Prompt Scanner"
+            navigate={navigate}
+            handleLogout={handleLogout}
+          />
 
-          {/* PAGE HEADER */}
+        </aside>
 
-          <section className="relative overflow-hidden bg-slate-900 border border-cyan-500/20 rounded-3xl p-6 md:p-8">
+        {/* =============================================================== */}
+        {/* MAIN CONTENT                                                    */}
+        {/* =============================================================== */}
 
-            {/* Background Glow */}
+        <main
+          className="
+            min-w-0
+            min-h-screen
+            bg-slate-50
+          "
+        >
 
-            <div className="absolute -top-24 -right-24 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div
+            className="
+              w-full
+              px-4
+              py-5
+              sm:px-6
+              sm:py-6
+              lg:px-7
+              lg:py-7
+              xl:px-8
+            "
+          >
 
-            <div className="relative flex flex-col xl:flex-row xl:items-center xl:justify-between gap-8">
+            {/* =========================================================== */}
+            {/* PAGE HEADER                                                  */}
+            {/* =========================================================== */}
 
-              {/* TITLE */}
+            <section
+              className="
+                relative
+                w-full
+                overflow-hidden
+                rounded-3xl
+                border
+                border-slate-200
+                bg-white
+                shadow-sm
+              "
+            >
 
-              <div>
+              {/* Blue glow */}
 
-                <div className="flex items-center gap-3 mb-4">
+              <div
+                className="
+                  pointer-events-none
+                  absolute
+                  -right-24
+                  -top-24
+                  h-72
+                  w-72
+                  rounded-full
+                  bg-blue-100/60
+                  blur-3xl
+                "
+              />
 
-                  <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+              {/* Green glow */}
 
-                    <ShieldCheck
-                      size={25}
-                      className="text-cyan-400"
-                    />
+              <div
+                className="
+                  pointer-events-none
+                  absolute
+                  -bottom-28
+                  -left-24
+                  h-64
+                  w-64
+                  rounded-full
+                  bg-green-100/40
+                  blur-3xl
+                "
+              />
+
+              {/* Orange glow */}
+
+              <div
+                className="
+                  pointer-events-none
+                  absolute
+                  -bottom-24
+                  right-1/3
+                  h-52
+                  w-52
+                  rounded-full
+                  bg-orange-100/30
+                  blur-3xl
+                "
+              />
+
+              <div
+                className="
+                  relative
+                  px-5
+                  py-6
+                  sm:px-7
+                  sm:py-7
+                  lg:px-8
+                  lg:py-8
+                "
+              >
+
+                <div
+                  className="
+                    flex
+                    flex-col
+                    gap-7
+                    xl:flex-row
+                    xl:items-center
+                    xl:justify-between
+                  "
+                >
+
+                  {/* ===================================================== */}
+                  {/* TITLE                                                   */}
+                  {/* ===================================================== */}
+
+                  <div className="min-w-0 flex-1">
+
+                    <div
+                      className="
+                        mb-4
+                        flex
+                        items-center
+                        gap-3
+                      "
+                    >
+
+                      <div
+                        className="
+                          flex
+                          h-11
+                          w-11
+                          shrink-0
+                          items-center
+                          justify-center
+                          rounded-2xl
+                          border
+                          border-blue-100
+                          bg-blue-50
+                        "
+                      >
+                        <ShieldCheck
+                          size={23}
+                          className="text-blue-600"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2">
+
+                        <span
+                          className="
+                            h-2
+                            w-2
+                            animate-pulse
+                            rounded-full
+                            bg-green-500
+                          "
+                        />
+
+                        <span
+                          className="
+                            text-xs
+                            font-semibold
+                            uppercase
+                            tracking-[0.12em]
+                            text-slate-500
+                          "
+                        >
+                          Security System Online
+                        </span>
+
+                      </div>
+
+                    </div>
+
+                    <h1
+                      className="
+                        text-2xl
+                        font-bold
+                        tracking-tight
+                        text-slate-900
+                        sm:text-3xl
+                      "
+                    >
+                      AI Prompt Scanner
+                    </h1>
+
+                    <p
+                      className="
+                        mt-2
+                        max-w-3xl
+                        text-sm
+                        leading-6
+                        text-slate-500
+                        sm:text-base
+                      "
+                    >
+                      Analyze AI prompts for prompt injection,
+                      jailbreak attempts, sensitive information
+                      exposure, and other security risks before
+                      sending them to an AI model.
+                    </p>
+
+                    {/* Made in India */}
+
+                    <div
+                      className="
+                        mt-5
+                        flex
+                        items-center
+                        gap-2
+                      "
+                    >
+
+                      <div className="flex overflow-hidden rounded-full">
+
+                        <span className="h-1.5 w-5 bg-orange-500" />
+
+                        <span className="h-1.5 w-5 bg-slate-200" />
+
+                        <span className="h-1.5 w-5 bg-green-600" />
+
+                      </div>
+
+                      <span
+                        className="
+                          text-xs
+                          font-semibold
+                          text-slate-400
+                        "
+                      >
+                        Made in India
+                      </span>
+
+                    </div>
 
                   </div>
 
-                  <div className="flex items-center gap-2 text-sm text-slate-400">
+                  {/* ===================================================== */}
+                  {/* STATUS CARDS                                           */}
+                  {/* ===================================================== */}
 
-                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  <div
+                    className="
+                      grid
+                      w-full
+                      shrink-0
+                      grid-cols-3
+                      gap-3
+                      xl:w-105
+                    "
+                  >
 
-                    Security System Online
+                    {/* Firewall */}
+
+                    <div
+                      className="
+                        rounded-2xl
+                        border
+                        border-slate-200
+                        bg-slate-50
+                        px-3
+                        py-4
+                        text-center
+                      "
+                    >
+
+                      <div
+                        className="
+                          mx-auto
+                          flex
+                          h-9
+                          w-9
+                          items-center
+                          justify-center
+                          rounded-xl
+                          bg-green-50
+                        "
+                      >
+                        <ShieldCheck
+                          size={20}
+                          className="text-green-600"
+                        />
+                      </div>
+
+                      <p
+                        className="
+                          mt-2
+                          text-xs
+                          font-medium
+                          text-slate-500
+                        "
+                      >
+                        Firewall
+                      </p>
+
+                      <p
+                        className="
+                          mt-1
+                          text-xs
+                          font-bold
+                          text-green-600
+                        "
+                      >
+                        Active
+                      </p>
+
+                    </div>
+
+                    {/* AI Engine */}
+
+                    <div
+                      className="
+                        rounded-2xl
+                        border
+                        border-slate-200
+                        bg-slate-50
+                        px-3
+                        py-4
+                        text-center
+                      "
+                    >
+
+                      <div
+                        className="
+                          mx-auto
+                          flex
+                          h-9
+                          w-9
+                          items-center
+                          justify-center
+                          rounded-xl
+                          bg-blue-50
+                        "
+                      >
+                        <Cpu
+                          size={20}
+                          className="text-blue-600"
+                        />
+                      </div>
+
+                      <p
+                        className="
+                          mt-2
+                          text-xs
+                          font-medium
+                          text-slate-500
+                        "
+                      >
+                        AI Engine
+                      </p>
+
+                      <p
+                        className="
+                          mt-1
+                          text-xs
+                          font-bold
+                          text-blue-600
+                        "
+                      >
+                        Ready
+                      </p>
+
+                    </div>
+
+                    {/* Monitor */}
+
+                    <div
+                      className="
+                        rounded-2xl
+                        border
+                        border-slate-200
+                        bg-slate-50
+                        px-3
+                        py-4
+                        text-center
+                      "
+                    >
+
+                      <div
+                        className="
+                          mx-auto
+                          flex
+                          h-9
+                          w-9
+                          items-center
+                          justify-center
+                          rounded-xl
+                          bg-orange-50
+                        "
+                      >
+                        <Activity
+                          size={20}
+                          className="text-orange-500"
+                        />
+                      </div>
+
+                      <p
+                        className="
+                          mt-2
+                          text-xs
+                          font-medium
+                          text-slate-500
+                        "
+                      >
+                        Monitor
+                      </p>
+
+                      <p
+                        className="
+                          mt-1
+                          text-xs
+                          font-bold
+                          text-orange-500
+                        "
+                      >
+                        Live
+                      </p>
+
+                    </div>
 
                   </div>
 
                 </div>
 
-                <h1 className="text-3xl md:text-4xl font-bold text-white">
-                  AI Prompt Scanner
-                </h1>
-
-                <p className="text-slate-400 mt-3 max-w-2xl">
-
-                  Analyze AI prompts for potential security threats,
-                  prompt injection attempts, and malicious instructions
-                  before sending them to an AI model.
-
-                </p>
-
               </div>
 
-              {/* SYSTEM STATUS */}
+            </section>
 
-              <div className="grid grid-cols-3 gap-3 md:gap-5">
+            {/* =========================================================== */}
+            {/* CONNECTION STATUS                                            */}
+            {/* =========================================================== */}
 
-                {/* FIREWALL */}
+            <div
+              className="
+                mt-4
+                flex
+                items-center
+                gap-2
+                px-1
+              "
+            >
 
-                <div className="min-w-25 bg-slate-950/60 border border-green-500/10 rounded-2xl px-4 py-4 text-center">
+              <Wifi
+                size={14}
+                className="shrink-0 text-blue-500"
+              />
 
-                  <ShieldCheck
-                    size={28}
-                    className="mx-auto text-green-400"
-                  />
-
-                  <p className="text-xs md:text-sm text-slate-400 mt-3">
-                    Firewall
-                  </p>
-
-                  <p className="text-xs text-green-400 font-semibold mt-1">
-                    Active
-                  </p>
-
-                </div>
-
-                {/* AI ENGINE */}
-
-                <div className="min-w-25 bg-slate-950/60 border border-cyan-500/10 rounded-2xl px-4 py-4 text-center">
-
-                  <Cpu
-                    size={28}
-                    className="mx-auto text-cyan-400"
-                  />
-
-                  <p className="text-xs md:text-sm text-slate-400 mt-3">
-                    AI Engine
-                  </p>
-
-                  <p className="text-xs text-cyan-400 font-semibold mt-1">
-                    Ready
-                  </p>
-
-                </div>
-
-                {/* MONITORING */}
-
-                <div className="min-w-25 bg-slate-950/60 border border-yellow-500/10 rounded-2xl px-4 py-4 text-center">
-
-                  <Activity
-                    size={28}
-                    className="mx-auto text-yellow-400"
-                  />
-
-                  <p className="text-xs md:text-sm text-slate-400 mt-3">
-                    Monitor
-                  </p>
-
-                  <p className="text-xs text-yellow-400 font-semibold mt-1">
-                    Live
-                  </p>
-
-                </div>
-
-              </div>
+              <span
+                className="
+                  text-xs
+                  font-medium
+                  text-slate-400
+                "
+              >
+                Connected to PromptSentinel Security Engine
+              </span>
 
             </div>
 
-          </section>
+            {/* =========================================================== */}
+            {/* PROMPT SCANNER                                               */}
+            {/* =========================================================== */}
 
-          {/* CONNECTION STATUS */}
+            <section className="mt-5 w-full">
 
-          <div className="flex items-center gap-2 mt-5 text-sm text-slate-500">
+              <PromptScanner
+                prompt={prompt}
+                setPrompt={setPrompt}
+                handleScan={handleScan}
+                loading={loading}
+              />
 
-            <Wifi
-              size={15}
-              className="text-cyan-400"
-            />
+            </section>
 
-            <span>
-              Connected to PromptSentinel Security Engine
-            </span>
+            {/* =========================================================== */}
+            {/* SCAN PROGRESS                                                */}
+            {/* =========================================================== */}
+
+            {loading && (
+              <section className="mt-5 w-full">
+
+                <ScanProgress />
+
+              </section>
+            )}
+
+            {/* =========================================================== */}
+            {/* RESULT                                                       */}
+            {/* =========================================================== */}
+
+            {result && (
+              <section className="mt-6 w-full">
+
+                <ResultCard result={result} />
+
+              </section>
+            )}
 
           </div>
 
-          {/* PROMPT SCANNER */}
+        </main>
 
-          <section className="mt-6">
-
-            <PromptScanner
-              prompt={prompt}
-              setPrompt={setPrompt}
-              handleScan={handleScan}
-              loading={loading}
-            />
-
-          </section>
-
-          {/* SCANNING PROGRESS */}
-
-          {loading && (
-
-            <section className="mt-6">
-              <ScanProgress />
-            </section>
-
-          )}
-
-          {/* RESULT */}
-
-          {result && (
-
-            <section className="mt-8">
-              <ResultCard result={result} />
-            </section>
-
-          )}
-
-        </div>
-
-      </main>
+      </div>
 
     </div>
   );

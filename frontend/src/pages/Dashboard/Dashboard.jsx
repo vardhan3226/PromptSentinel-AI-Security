@@ -8,13 +8,13 @@ import { generatePDF } from "../../utils/pdf/generateDashboardReport";
 
 const API_BASE_URL = "http://localhost:5000";
 
-const initialUser = {
+const INITIAL_USER = {
   fullName: "",
   email: "",
   role: "",
 };
 
-const initialStats = {
+const INITIAL_STATS = {
   totalScans: 0,
   safePrompts: 0,
   lowRiskPrompts: 0,
@@ -22,33 +22,11 @@ const initialStats = {
   highRiskPrompts: 0,
   criticalRiskPrompts: 0,
   highRiskFindings: 0,
+  threatsBlocked: 0,
   averageRiskScore: 0,
   safePromptRate: 0,
+  threatDistribution: {},
   attackTypeDistribution: [],
-};
-
-const initialBenchmark = {
-  metrics: {
-    total: 0,
-    truePositive: 0,
-    trueNegative: 0,
-    falsePositive: 0,
-    falseNegative: 0,
-    accuracy: 0,
-    precision: 0,
-    recall: 0,
-    f1Score: 0,
-  },
-  results: [],
-};
-
-const initialRobustness = {
-  originalPrompt: "",
-  totalMutations: 0,
-  detectedMutations: 0,
-  missedMutations: 0,
-  detectionRate: 0,
-  results: [],
 };
 
 function Dashboard() {
@@ -58,22 +36,21 @@ function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
-  const [user, setUser] = useState(initialUser);
+  const [user, setUser] = useState(
+    INITIAL_USER
+  );
 
-  const [stats, setStats] = useState(initialStats);
+  const [stats, setStats] = useState(
+    INITIAL_STATS
+  );
 
   const [history, setHistory] = useState([]);
 
-  const [benchmark, setBenchmark] =
-    useState(initialBenchmark);
-
-  const [robustness, setRobustness] =
-    useState(initialRobustness);
-
-  const [robustnessLoading, setRobustnessLoading] =
-    useState(false);
-
   const token = localStorage.getItem("token");
+
+  /* ============================================================
+     AUTH CHECK
+  ============================================================ */
 
   useEffect(() => {
     if (!token) {
@@ -81,50 +58,15 @@ function Dashboard() {
     }
   }, [token, navigate]);
 
-  const formatStats = (rawStats) => {
-    return {
-      totalScans: rawStats?.totalScans || 0,
-
-      safePrompts: rawStats?.safePrompts || 0,
-
-      lowRiskPrompts:
-        rawStats?.lowRiskPrompts || 0,
-
-      mediumRiskPrompts:
-        rawStats?.mediumRiskPrompts || 0,
-
-      highRiskPrompts:
-        rawStats?.highRiskPrompts || 0,
-
-      criticalRiskPrompts:
-        rawStats?.criticalRiskPrompts || 0,
-
-      highRiskFindings:
-        rawStats?.highRiskFindings || 0,
-
-      averageRiskScore:
-        rawStats?.averageRiskScore || 0,
-
-      safePromptRate:
-        rawStats?.safePromptRate || 0,
-
-      attackTypeDistribution:
-        Array.isArray(
-          rawStats?.attackTypeDistribution
-        )
-          ? rawStats.attackTypeDistribution
-          : [],
-    };
-  };
+  /* ============================================================
+     COMMON API REQUEST
+  ============================================================ */
 
   const apiRequest = async (
     endpoint,
     options = {}
   ) => {
-    const currentToken =
-      localStorage.getItem("token");
-
-    if (!currentToken) {
+    if (!token) {
       navigate("/login");
 
       throw new Error(
@@ -136,13 +78,9 @@ function Dashboard() {
       `${API_BASE_URL}${endpoint}`,
       {
         ...options,
-
         headers: {
           "Content-Type": "application/json",
-
-          Authorization:
-            `Bearer ${currentToken}`,
-
+          Authorization: `Bearer ${token}`,
           ...(options.headers || {}),
         },
       }
@@ -174,157 +112,105 @@ function Dashboard() {
     if (!response.ok) {
       throw new Error(
         data?.message ||
-        `Request failed with status ${response.status}.`
+          `Request failed with status ${response.status}.`
       );
     }
 
     return data;
   };
 
-  useEffect(() => {
-    if (!token) {
-      return;
-    }
+  /* ============================================================
+     FETCH PROFILE
+  ============================================================ */
 
-    const loadDashboard = async () => {
-      try {
-        const headers = {
-          "Content-Type": "application/json",
+  const fetchProfile = async () => {
+    try {
+      const data = await apiRequest(
+        "/api/auth/profile"
+      );
 
-          Authorization:
-            `Bearer ${token}`,
-        };
-
-        const [
-          profileResponse,
-          statsResponse,
-          historyResponse,
-          benchmarkResponse,
-        ] = await Promise.all([
-          fetch(
-            `${API_BASE_URL}/api/auth/profile`,
-            {
-              headers,
-            }
-          ),
-
-          fetch(
-            `${API_BASE_URL}/api/dashboard/stats`,
-            {
-              headers,
-            }
-          ),
-
-          fetch(
-            `${API_BASE_URL}/api/scan/history`,
-            {
-              headers,
-            }
-          ),
-
-          fetch(
-            `${API_BASE_URL}/api/dashboard/benchmark`,
-            {
-              headers,
-            }
-          ),
-        ]);
-
-        const responses = [
-          profileResponse,
-          statsResponse,
-          historyResponse,
-          benchmarkResponse,
-        ];
-
-        const unauthorized =
-          responses.some(
-            (response) =>
-              response.status === 401 ||
-              response.status === 403
-          );
-
-        if (unauthorized) {
-          localStorage.removeItem("token");
-
-          navigate("/login");
-
-          return;
-        }
-
-        const [
-          profileData,
-          statsData,
-          historyData,
-          benchmarkData,
-        ] = await Promise.all([
-          profileResponse.json(),
-          statsResponse.json(),
-          historyResponse.json(),
-          benchmarkResponse.json(),
-        ]);
-
-        if (
-          profileResponse.ok &&
-          profileData.success &&
-          profileData.user
-        ) {
-          setUser({
-            fullName:
-              profileData.user.fullName || "",
-
-            email:
-              profileData.user.email || "",
-
-            role:
-              profileData.user.role || "",
-          });
-        }
-
-        if (
-          statsResponse.ok &&
-          statsData.success &&
-          statsData.stats
-        ) {
-          setStats(
-            formatStats(statsData.stats)
-          );
-        }
-
-        if (
-          historyResponse.ok &&
-          historyData.success
-        ) {
-          setHistory(
-            Array.isArray(
-              historyData.history
-            )
-              ? historyData.history
-              : []
-          );
-        }
-
-        if (
-          benchmarkResponse.ok &&
-          benchmarkData.success &&
-          benchmarkData.benchmark
-        ) {
-          setBenchmark(
-            benchmarkData.benchmark
-          );
-        }
-      } catch (error) {
-        console.error(
-          "Dashboard loading error:",
-          error
-        );
+      if (data.success && data.user) {
+        setUser({
+          fullName:
+            data.user.fullName || "",
+          email:
+            data.user.email || "",
+          role:
+            data.user.role || "",
+        });
       }
+    } catch (error) {
+      console.error(
+        "Profile fetch error:",
+        error.message
+      );
+    }
+  };
+
+  /* ============================================================
+     FORMAT STATS
+  ============================================================ */
+
+  const formatStats = (rawStats) => {
+    const highRiskFindings =
+      Number(rawStats?.highRiskFindings || 0);
+
+    return {
+      totalScans:
+        Number(rawStats?.totalScans || 0),
+
+      safePrompts:
+        Number(rawStats?.safePrompts || 0),
+
+      lowRiskPrompts:
+        Number(rawStats?.lowRiskPrompts || 0),
+
+      mediumRiskPrompts:
+        Number(rawStats?.mediumRiskPrompts || 0),
+
+      highRiskPrompts:
+        Number(rawStats?.highRiskPrompts || 0),
+
+      criticalRiskPrompts:
+        Number(
+          rawStats?.criticalRiskPrompts || 0
+        ),
+
+      highRiskFindings,
+
+      threatsBlocked: highRiskFindings,
+
+      averageRiskScore:
+        Number(
+          rawStats?.averageRiskScore || 0
+        ),
+
+      safePromptRate:
+        Number(
+          rawStats?.safePromptRate || 0
+        ),
+
+      threatDistribution:
+        rawStats?.threatDistribution &&
+        typeof rawStats.threatDistribution ===
+          "object"
+          ? rawStats.threatDistribution
+          : {},
+
+      attackTypeDistribution:
+        Array.isArray(
+          rawStats?.attackTypeDistribution
+        )
+          ? rawStats.attackTypeDistribution
+          : [],
     };
+  };
 
-    loadDashboard();
-  }, [token, navigate]);
+  /* ============================================================
+     FETCH DASHBOARD STATS
+  ============================================================ */
 
-  const refreshStats = async () => {
+  const fetchStats = async () => {
     try {
       const data = await apiRequest(
         "/api/dashboard/stats"
@@ -340,13 +226,17 @@ function Dashboard() {
       }
     } catch (error) {
       console.error(
-        "Stats refresh error:",
+        "Stats fetch error:",
         error.message
       );
     }
   };
 
-  const refreshHistory = async () => {
+  /* ============================================================
+     FETCH HISTORY
+  ============================================================ */
+
+  const fetchHistory = async () => {
     try {
       const data = await apiRequest(
         "/api/scan/history"
@@ -354,29 +244,67 @@ function Dashboard() {
 
       if (data.success) {
         setHistory(
-          Array.isArray(
-            data.history
-          )
+          Array.isArray(data.history)
             ? data.history
             : []
         );
       }
     } catch (error) {
       console.error(
-        "History refresh error:",
+        "History fetch error:",
         error.message
       );
     }
   };
 
+  /* ============================================================
+     INITIAL LOAD
+  ============================================================ */
+
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+
+    const loadDashboard = async () => {
+      await Promise.all([
+        fetchProfile(),
+        fetchStats(),
+        fetchHistory(),
+      ]);
+    };
+
+    loadDashboard();
+  }, [token]);
+
+  /* ============================================================
+     REFRESH STATS
+  ============================================================ */
+
+  const refreshStats = async () => {
+    await fetchStats();
+  };
+
+  /* ============================================================
+     REFRESH HISTORY
+  ============================================================ */
+
+  const refreshHistory = async () => {
+    await fetchHistory();
+  };
+
+  /* ============================================================
+     SCAN PROMPT
+  ============================================================ */
+
   const handleScan = async () => {
-    const trimmedPrompt = prompt.trim();
+    const trimmedPrompt =
+      prompt.trim();
 
     if (!trimmedPrompt) {
       alert(
         "Please enter a prompt."
       );
-
       return;
     }
 
@@ -386,14 +314,12 @@ function Dashboard() {
 
     try {
       setLoading(true);
-
       setResult(null);
 
       const data = await apiRequest(
         "/api/scan",
         {
           method: "POST",
-
           body: JSON.stringify({
             prompt: trimmedPrompt,
           }),
@@ -415,7 +341,7 @@ function Dashboard() {
       } else {
         throw new Error(
           data?.message ||
-          "Prompt scanning failed."
+            "Prompt scanning failed."
         );
       }
     } catch (error) {
@@ -426,93 +352,34 @@ function Dashboard() {
 
       alert(
         error.message ||
-        "Unable to scan the prompt."
+          "Unable to scan the prompt."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRobustnessTest = async () => {
-    const trimmedPrompt = prompt.trim();
-
-    if (!trimmedPrompt) {
-      alert(
-        "Enter a prompt before starting the robustness test."
-      );
-
-      return;
-    }
-
-    if (robustnessLoading) {
-      return;
-    }
-
-    try {
-      setRobustnessLoading(true);
-
-      setRobustness(initialRobustness);
-
-      const data = await apiRequest(
-        "/api/scan/robustness",
-        {
-          method: "POST",
-
-          body: JSON.stringify({
-            prompt: trimmedPrompt,
-          }),
-        }
-      );
-
-      if (
-        data.success &&
-        data.robustness
-      ) {
-        setRobustness(
-          data.robustness
-        );
-      } else {
-        throw new Error(
-          data?.message ||
-          "Robustness test failed."
-        );
-      }
-    } catch (error) {
-      console.error(
-        "Robustness test error:",
-        error
-      );
-
-      alert(
-        error.message ||
-        "Unable to run robustness test."
-      );
-    } finally {
-      setRobustnessLoading(false);
-    }
-  };
+  /* ============================================================
+     LOGOUT
+  ============================================================ */
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    localStorage.removeItem(
+      "token"
+    );
 
-    setUser(initialUser);
-
-    setStats(initialStats);
-
+    setUser(INITIAL_USER);
+    setStats(INITIAL_STATS);
     setPrompt("");
-
     setResult(null);
-
     setHistory([]);
-
-    setBenchmark(initialBenchmark);
-
-    setRobustness(initialRobustness);
-
-    setRobustnessLoading(false);
 
     navigate("/login");
   };
+
+  /* ============================================================
+     EXPORT DASHBOARD
+  ============================================================ */
 
   const handleExportDashboard = () => {
     try {
@@ -533,8 +400,22 @@ function Dashboard() {
     }
   };
 
+  /* ============================================================
+     RENDER
+  ============================================================ */
+
   return (
-    <div className="flex min-h-screen bg-slate-950 text-white">
+    <div
+      className="
+        min-h-dvh
+        w-full
+        overflow-x-hidden
+        bg-[#f6f9fc]
+      "
+    >
+      {/* =====================================================
+          FIXED SIDEBAR
+      ===================================================== */}
 
       <Sidebar
         navigate={navigate}
@@ -542,26 +423,33 @@ function Dashboard() {
         active="Dashboard"
       />
 
-      <DashboardContent
-        user={user}
-        stats={stats}
-        benchmark={benchmark}
-        robustness={robustness}
-        robustnessLoading={robustnessLoading}
-        prompt={prompt}
-        setPrompt={setPrompt}
-        handleScan={handleScan}
-        handleRobustnessTest={
-          handleRobustnessTest
-        }
-        loading={loading}
-        result={result}
-        history={history}
-        handleExportDashboard={
-          handleExportDashboard
-        }
-      />
+      {/* =====================================================
+          DASHBOARD CONTENT
+      ===================================================== */}
 
+      <main
+        className="
+          ml-65
+          min-h-dvh
+          min-w-0
+          overflow-x-hidden
+          box-border
+        "
+      >
+        <DashboardContent
+          user={user}
+          stats={stats}
+          prompt={prompt}
+          setPrompt={setPrompt}
+          handleScan={handleScan}
+          loading={loading}
+          result={result}
+          recentScans={history}
+          handleExportDashboard={
+            handleExportDashboard
+          }
+        />
+      </main>
     </div>
   );
 }

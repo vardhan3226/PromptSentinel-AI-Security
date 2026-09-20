@@ -1,195 +1,266 @@
 import { useEffect, useState } from "react";
-
 import {
   ShieldCheck,
-  Activity,
   Server,
-  Clock,
-  User,
   Cpu,
+  Clock3,
+  User,
+  Activity,
 } from "lucide-react";
 
 function FirewallStatus({ user }) {
-  const [currentTime, setCurrentTime] = useState("");
+  const [currentTime, setCurrentTime] = useState(
+    new Date()
+  );
 
   useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-
-      setCurrentTime(
-        now.toLocaleString("en-IN", {
-          dateStyle: "full",
-          timeStyle: "medium",
-        })
-      );
-    };
-
-    updateTime();
-
-    const timer = setInterval(
-      updateTime,
-      1000
-    );
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
 
     return () => clearInterval(timer);
   }, []);
 
+  const formattedTime = currentTime.toLocaleTimeString(
+    "en-IN",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    }
+  );
+
+  const formattedDate = currentTime.toLocaleDateString(
+    "en-IN",
+    {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }
+  );
+
   return (
-    <div className="bg-slate-900 border border-cyan-500/20 rounded-3xl p-8 shadow-xl">
+    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
-      <div className="flex flex-col xl:flex-row xl:justify-between xl:items-start gap-8">
+      {/* TOP ACCENT */}
 
-        {/* PLATFORM INFORMATION */}
+      <div className="absolute left-0 top-0 h-1 w-full bg-gradient-to-r from-orange-500 via-blue-500 to-green-600" />
 
-        <div>
+      {/* HEADER */}
+
+      <div className="flex items-start justify-between gap-4">
+
+        <div className="flex items-center gap-3">
+
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-50">
+            <ShieldCheck
+              size={22}
+              className="text-green-600"
+            />
+          </div>
+
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-slate-900">
+              Firewall Status
+            </h2>
+
+            <p className="mt-1 text-xs text-slate-500">
+              PromptSentinel system status
+            </p>
+          </div>
+
+        </div>
+
+        <div className="flex items-center gap-2 rounded-full bg-green-50 px-3 py-1.5">
+
+          <span className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
+
+          <span className="text-[10px] font-bold uppercase tracking-wider text-green-700">
+            Operational
+          </span>
+
+        </div>
+
+      </div>
+
+      {/* CURRENT TIME */}
+
+      <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50/60 p-5">
+
+        <div className="flex items-center gap-3">
+
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm">
+            <Clock3
+              size={19}
+              className="text-blue-600"
+            />
+          </div>
+
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue-500">
+              Current Time
+            </p>
+
+            <p className="mt-1 text-2xl font-black tracking-tight text-slate-900">
+              {formattedTime}
+            </p>
+
+            <p className="mt-0.5 text-xs text-slate-500">
+              {formattedDate}
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* SYSTEM INFORMATION */}
+
+      <div className="mt-5 space-y-3">
+
+        {/* USER */}
+
+        <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 p-3">
 
           <div className="flex items-center gap-3">
 
-            <ShieldCheck
-              size={42}
-              className="text-cyan-400"
-            />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
+              <User
+                size={17}
+                className="text-blue-600"
+              />
+            </div>
 
             <div>
-
-              <h1 className="text-4xl font-bold text-white">
-                PromptSentinel
-              </h1>
-
-              <p className="text-slate-400">
-                AI Prompt Security Platform
+              <p className="text-[10px] uppercase tracking-wider text-slate-400">
+                Logged User
               </p>
 
+              <p className="mt-0.5 max-w-[180px] truncate text-sm font-semibold text-slate-700">
+                {user?.fullName ||
+                  user?.email ||
+                  "Authenticated User"}
+              </p>
             </div>
 
           </div>
 
-
-          {/* SYSTEM INFORMATION */}
-
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-5">
-
-            {/* USER */}
-
-            <div className="flex items-center gap-3">
-
-              <User className="text-cyan-400" />
-
-              <div>
-
-                <p className="text-slate-400 text-sm">
-                  Logged User
-                </p>
-
-                <p className="font-semibold text-white">
-                  {user?.fullName || "User"}
-                </p>
-
-              </div>
-
-            </div>
-
-
-            {/* SECURITY */}
-
-            <div className="flex items-center gap-3">
-
-              <Activity className="text-green-400" />
-
-              <div>
-
-                <p className="text-slate-400 text-sm">
-                  Security Mode
-                </p>
-
-                <p className="text-green-400 font-semibold">
-                  Prompt Analysis
-                </p>
-
-              </div>
-
-            </div>
-
-
-            {/* BACKEND */}
-
-            <div className="flex items-center gap-3">
-
-              <Server className="text-cyan-400" />
-
-              <div>
-
-                <p className="text-slate-400 text-sm">
-                  Backend Service
-                </p>
-
-                <p className="font-semibold text-white">
-                  API Connected
-                </p>
-
-              </div>
-
-            </div>
-
-
-            {/* ENGINE */}
-
-            <div className="flex items-center gap-3">
-
-              <Cpu className="text-yellow-400" />
-
-              <div>
-
-                <p className="text-slate-400 text-sm">
-                  Detection Engine
-                </p>
-
-                <p className="font-semibold text-white">
-                  Ready for Scanning
-                </p>
-
-              </div>
-
-            </div>
-
-          </div>
+          <span className="rounded-full bg-green-50 px-2.5 py-1 text-[9px] font-bold text-green-700">
+            AUTHENTICATED
+          </span>
 
         </div>
 
+        {/* SECURITY MODE */}
 
-        {/* CURRENT TIME */}
+        <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 p-3">
 
-        <div className="bg-slate-950 rounded-2xl p-6 border border-cyan-500/20 min-w-70">
+          <div className="flex items-center gap-3">
 
-          <div className="flex items-center gap-2 mb-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-50">
+              <ShieldCheck
+                size={17}
+                className="text-orange-600"
+              />
+            </div>
 
-            <Clock className="text-cyan-400" />
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-slate-400">
+                Security Mode
+              </p>
 
-            <span className="text-slate-300 font-semibold">
-              Current Time
-            </span>
-
-          </div>
-
-          <p className="text-sm text-slate-400 leading-6">
-
-            {currentTime}
-
-          </p>
-
-          <div className="mt-6 flex items-center gap-2">
-
-            <div className="w-3 h-3 rounded-full bg-cyan-500 animate-pulse" />
-
-            <span className="text-cyan-400 font-semibold">
-
-              Dashboard Active
-
-            </span>
+              <p className="mt-0.5 text-sm font-semibold text-slate-700">
+                AI Threat Detection
+              </p>
+            </div>
 
           </div>
+
+          <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[9px] font-bold text-orange-700">
+            ACTIVE
+          </span>
 
         </div>
+
+        {/* BACKEND */}
+
+        <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 p-3">
+
+          <div className="flex items-center gap-3">
+
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50">
+              <Server
+                size={17}
+                className="text-green-600"
+              />
+            </div>
+
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-slate-400">
+                Backend Service
+              </p>
+
+              <p className="mt-0.5 text-sm font-semibold text-slate-700">
+                API Server
+              </p>
+            </div>
+
+          </div>
+
+          <span className="rounded-full bg-green-50 px-2.5 py-1 text-[9px] font-bold text-green-700">
+            ONLINE
+          </span>
+
+        </div>
+
+        {/* DETECTION ENGINE */}
+
+        <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 p-3">
+
+          <div className="flex items-center gap-3">
+
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
+              <Cpu
+                size={17}
+                className="text-blue-600"
+              />
+            </div>
+
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-slate-400">
+                Detection Engine
+              </p>
+
+              <p className="mt-0.5 text-sm font-semibold text-slate-700">
+                Local + AI Analysis
+              </p>
+            </div>
+
+          </div>
+
+          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[9px] font-bold text-blue-700">
+            READY
+          </span>
+
+        </div>
+
+      </div>
+
+      {/* STATUS FOOTER */}
+
+      <div className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-4">
+
+        <Activity
+          size={15}
+          className="text-green-500"
+        />
+
+        <p className="text-[11px] text-slate-500">
+          Security services are ready for prompt
+          analysis.
+        </p>
 
       </div>
 

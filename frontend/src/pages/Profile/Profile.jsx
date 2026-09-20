@@ -1,59 +1,103 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import {
+  RefreshCw,
+  ShieldCheck,
+} from "lucide-react";
+
 import Sidebar from "../../components/Sidebar";
 import ProfileCard from "../../components/ProfileCard";
 
-import {
-  User,
-  ShieldCheck,
-  Mail,
-  BadgeCheck,
-} from "lucide-react";
+const API_BASE_URL =
+  "http://localhost:5000";
+
+const initialUser = {
+  fullName: "",
+  email: "",
+  role: "",
+};
+
+const initialStats = {
+  totalScans: 0,
+  safePrompts: 0,
+  highRiskFindings: 0,
+  threatsBlocked: 0,
+};
 
 function Profile() {
   const navigate = useNavigate();
 
-  const [user, setUser] = useState(null);
+  const [user, setUser] =
+    useState(initialUser);
 
-  const [stats, setStats] = useState({
-    totalScans: 0,
-    safePrompts: 0,
-    highRiskPrompts: 0,
-    threatsBlocked: 0,
-  });
+  const [stats, setStats] =
+    useState(initialStats);
 
-  /*
-  |--------------------------------------------------------------------------
-  | LOAD PROFILE AND STATISTICS
-  |--------------------------------------------------------------------------
-  */
+  const [loading, setLoading] =
+    useState(true);
 
-  useEffect(() => {
-    const loadProfileData = async () => {
+  const handleLogout = () => {
+    localStorage.removeItem(
+      "token"
+    );
+
+    navigate("/login");
+  };
+
+  const loadProfile =
+    async () => {
+      const token =
+        localStorage.getItem(
+          "token"
+        );
+
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
       try {
-        const token = localStorage.getItem("token");
+        setLoading(true);
 
-        const [profileResponse, statsResponse] =
-          await Promise.all([
-            fetch(
-              "http://localhost:5000/api/auth/profile",
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            ),
+        const [
+          profileResponse,
+          statsResponse,
+        ] = await Promise.all([
+          fetch(
+            `${API_BASE_URL}/api/auth/profile`,
+            {
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+              },
+            }
+          ),
 
-            fetch(
-              "http://localhost:5000/api/dashboard/stats",
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            ),
-          ]);
+          fetch(
+            `${API_BASE_URL}/api/dashboard/stats`,
+            {
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+              },
+            }
+          ),
+        ]);
+
+        if (
+          profileResponse.status === 401 ||
+          profileResponse.status === 403 ||
+          statsResponse.status === 401 ||
+          statsResponse.status === 403
+        ) {
+          localStorage.removeItem(
+            "token"
+          );
+
+          navigate("/login");
+          return;
+        }
 
         const profileData =
           await profileResponse.json();
@@ -61,57 +105,76 @@ function Profile() {
         const statsData =
           await statsResponse.json();
 
-        if (profileData.success) {
-          setUser(profileData.user);
+        if (
+          profileData.success &&
+          profileData.user
+        ) {
+          setUser(
+            profileData.user
+          );
         }
 
-        if (statsData.success) {
-          setStats(statsData.stats);
+        if (
+          statsData.success &&
+          statsData.stats
+        ) {
+          const raw =
+            statsData.stats;
+
+          const highRisk =
+            Number(
+              raw.highRiskFindings ||
+                (
+                  Number(
+                    raw.highRiskPrompts ||
+                      0
+                  ) +
+                  Number(
+                    raw.criticalRiskPrompts ||
+                      0
+                  )
+                )
+            );
+
+          setStats({
+            totalScans:
+              Number(
+                raw.totalScans ||
+                  0
+              ),
+
+            safePrompts:
+              Number(
+                raw.safePrompts ||
+                  0
+              ),
+
+            highRiskFindings:
+              highRisk,
+
+            threatsBlocked:
+              Number(
+                raw.threatsBlocked ||
+                  0
+              ),
+          });
         }
       } catch (error) {
         console.error(
-          "Failed to load profile data:",
+          "Profile error:",
           error
         );
+      } finally {
+        setLoading(false);
       }
     };
 
-    loadProfileData();
+  useEffect(() => {
+    loadProfile();
   }, []);
 
-  /*
-  |--------------------------------------------------------------------------
-  | LOGOUT
-  |--------------------------------------------------------------------------
-  */
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
-  };
-
-  /*
-  |--------------------------------------------------------------------------
-  | LOADING
-  |--------------------------------------------------------------------------
-  */
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white text-2xl">
-        Loading Profile...
-      </div>
-    );
-  }
-
-  /*
-  |--------------------------------------------------------------------------
-  | PAGE
-  |--------------------------------------------------------------------------
-  */
-
   return (
-    <div className="flex min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen w-full bg-[#f5f8fc]">
 
       <Sidebar
         active="Profile"
@@ -119,117 +182,124 @@ function Profile() {
         handleLogout={handleLogout}
       />
 
-      <div className="flex-1 p-8 overflow-y-auto">
+      <main className="min-h-screen w-full pl-[260px]">
 
-        {/* =====================================================
-            PAGE HEADER
-        ====================================================== */}
+        <div className="w-full px-5 py-5 md:px-7 lg:px-8">
 
-        <div className="bg-slate-900 rounded-3xl border border-cyan-500/20 p-8">
+          {/* HEADER */}
 
-          <div className="flex justify-between items-center">
+          <section className="mb-5 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm">
 
-            <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
-              <h1 className="text-4xl font-bold">
-                My Profile
-              </h1>
+              <div className="flex items-center gap-3">
 
-              <p className="text-slate-400 mt-2">
-                Manage your PromptSentinel account
-              </p>
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50">
+                  <ShieldCheck
+                    size={21}
+                    className="text-blue-600"
+                  />
+                </div>
+
+                <div>
+                  <h1 className="text-2xl font-extrabold tracking-tight text-[#102a63]">
+                    My Profile
+                  </h1>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Account information and security activity.
+                  </p>
+                </div>
+
+              </div>
+
+              <button
+                type="button"
+                onClick={
+                  loadProfile
+                }
+                disabled={loading}
+                className="
+                  inline-flex
+                  items-center
+                  justify-center
+                  gap-2
+                  self-start
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-white
+                  px-4
+                  py-2.5
+                  text-xs
+                  font-bold
+                  text-slate-600
+                  transition
+                  hover:bg-slate-50
+                  disabled:opacity-50
+                  sm:self-auto
+                "
+              >
+                <RefreshCw
+                  size={15}
+                  className={
+                    loading
+                      ? "animate-spin"
+                      : ""
+                  }
+                />
+
+                Refresh
+              </button>
 
             </div>
 
-            <User
-              size={55}
-              className="text-cyan-400"
+          </section>
+
+          {/* PROFILE CARD */}
+
+          {loading ? (
+            <div className="space-y-5">
+
+              <div className="h-[250px] animate-pulse rounded-[24px] bg-white shadow-sm" />
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+
+                <div className="h-[150px] animate-pulse rounded-[20px] bg-white" />
+
+                <div className="h-[150px] animate-pulse rounded-[20px] bg-white" />
+
+                <div className="h-[150px] animate-pulse rounded-[20px] bg-white" />
+
+              </div>
+
+            </div>
+          ) : (
+            <ProfileCard
+              user={user}
+              stats={stats}
             />
+          )}
+
+          {/* FOOTER */}
+
+          <div className="flex items-center justify-center gap-3 py-5">
+
+            <div className="flex overflow-hidden rounded-full">
+              <span className="h-1.5 w-5 bg-orange-500" />
+              <span className="h-1.5 w-5 bg-slate-200" />
+              <span className="h-1.5 w-5 bg-green-600" />
+            </div>
+
+            <span className="text-xs font-semibold text-slate-400">
+              PromptSentinel · Made in India
+            </span>
 
           </div>
 
         </div>
 
-        {/* =====================================================
-            ACCOUNT INFORMATION
-        ====================================================== */}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-
-          {/* EMAIL */}
-
-          <div className="bg-slate-900 border border-cyan-500/20 rounded-2xl p-6">
-
-            <Mail
-              className="text-cyan-400 mb-4"
-              size={32}
-            />
-
-            <p className="text-slate-400">
-              Email Address
-            </p>
-
-            <h3 className="font-bold mt-2 break-all">
-              {user.email}
-            </h3>
-
-          </div>
-
-          {/* ROLE */}
-
-          <div className="bg-slate-900 border border-green-500/20 rounded-2xl p-6">
-
-            <BadgeCheck
-              className="text-green-400 mb-4"
-              size={32}
-            />
-
-            <p className="text-slate-400">
-              Role
-            </p>
-
-            <h3 className="font-bold mt-2 text-green-400">
-              {user.role}
-            </h3>
-
-          </div>
-
-          {/* STATUS */}
-
-          <div className="bg-slate-900 border border-yellow-500/20 rounded-2xl p-6">
-
-            <ShieldCheck
-              className="text-yellow-400 mb-4"
-              size={32}
-            />
-
-            <p className="text-slate-400">
-              Account Status
-            </p>
-
-            <h3 className="font-bold mt-2 text-green-400">
-              Active
-            </h3>
-
-          </div>
-
-        </div>
-
-        {/* =====================================================
-            PROFILE CARD
-        ====================================================== */}
-
-        <div className="mt-8">
-
-          <ProfileCard
-            user={user}
-            stats={stats}
-          />
-
-        </div>
-
-      </div>
-
+      </main>
     </div>
   );
 }
