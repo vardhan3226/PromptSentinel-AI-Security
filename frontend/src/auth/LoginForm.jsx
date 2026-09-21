@@ -111,14 +111,13 @@ function LoginForm() {
 
               </Link>
 
-
               {/* MADE IN INDIA */}
 
               <div className="hidden text-right sm:block">
 
                 <div className="flex justify-end">
                   <span className="h-1.5 w-5 rounded-l-full bg-orange-500" />
-                  <span className="h-1.5 w-5 bg-white border-y border-slate-100" />
+                  <span className="h-1.5 w-5 border-y border-slate-100 bg-white" />
                   <span className="h-1.5 w-5 rounded-r-full bg-green-600" />
                 </div>
 
@@ -134,7 +133,6 @@ function LoginForm() {
 
             </div>
 
-
             {/* LOGIN CONTENT */}
 
             <div className="mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-center">
@@ -147,7 +145,6 @@ function LoginForm() {
                 Continue to your secure workspace.
               </p>
 
-
               {/* ERROR */}
 
               {error && (
@@ -155,7 +152,6 @@ function LoginForm() {
                   {error}
                 </div>
               )}
-
 
               {/* FORM */}
 
@@ -192,7 +188,6 @@ function LoginForm() {
                   </div>
 
                 </div>
-
 
                 {/* PASSWORD */}
 
@@ -237,7 +232,6 @@ function LoginForm() {
 
                 </div>
 
-
                 {/* REMEMBER / FORGOT */}
 
                 <div className="flex items-center justify-between pt-0.5">
@@ -253,16 +247,15 @@ function LoginForm() {
 
                   </label>
 
-
                   <button
                     type="button"
+                    onClick={() => navigate("/forgot-password")}
                     className="text-[10px] font-semibold text-blue-600 transition hover:text-blue-700"
                   >
                     Forgot password?
                   </button>
 
                 </div>
-
 
                 {/* LOGIN BUTTON */}
 
@@ -285,7 +278,6 @@ function LoginForm() {
 
               </form>
 
-
               {/* REGISTER LINK */}
 
               <p className="mt-5 text-center text-[10px] text-slate-500">
@@ -305,7 +297,6 @@ function LoginForm() {
 
           </section>
 
-
           {/* =====================================================
               RIGHT — INDIA VISUAL
           ====================================================== */}
@@ -320,11 +311,9 @@ function LoginForm() {
 
             <div className="absolute -bottom-32 -left-24 h-[360px] w-[360px] rounded-full bg-orange-200/25 blur-3xl" />
 
-
             {/* SOFT DECORATIVE CURVE */}
 
             <div className="absolute right-[-120px] top-[70px] h-[220px] w-[520px] rotate-[-16deg] rounded-[50%] border-[35px] border-green-200/25" />
-
 
             {/* QUOTE CARD */}
 
@@ -344,7 +333,6 @@ function LoginForm() {
 
               </h2>
 
-
               {/* TRICOLOR */}
 
               <div className="mt-5 flex">
@@ -357,7 +345,6 @@ function LoginForm() {
 
               </div>
 
-
               <div className="mt-5 space-y-0.5 text-[10px] font-medium leading-4 text-slate-600">
 
                 <p>Analyze.</p>
@@ -368,7 +355,6 @@ function LoginForm() {
 
             </div>
 
-
             {/* INDIA GATE */}
 
             <div className="absolute bottom-[55px] left-1/2 z-10 h-[300px] w-[330px] -translate-x-1/2">
@@ -376,7 +362,6 @@ function LoginForm() {
               {/* GROUND GLOW */}
 
               <div className="absolute bottom-0 left-1/2 h-20 w-72 -translate-x-1/2 rounded-full bg-green-300/30 blur-2xl" />
-
 
               {/* MONUMENT */}
 
@@ -406,7 +391,6 @@ function LoginForm() {
 
                 </div>
 
-
                 {/* LEFT TOWER */}
 
                 <div className="absolute bottom-0 left-0 h-[190px] w-10 rounded-t-md bg-[#c69b60]" />
@@ -422,7 +406,6 @@ function LoginForm() {
                 <div className="absolute right-[-2px] top-[-8px] h-5 w-11 rounded-full bg-[#b98c4e]" />
 
               </div>
-
 
               {/* WAVES */}
 
@@ -459,7 +442,6 @@ function LoginForm() {
               </svg>
 
             </div>
-
 
             {/* SMALL BIRDS */}
 

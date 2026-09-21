@@ -22,6 +22,9 @@ import Technology from "./pages/Technology/Technology";
 
 import Register from "./pages/Auth/Register";
 import Login from "./pages/Auth/Login";
+import ForgotPassword from "./pages/Auth/ForgotPassword";
+import ResetPassword from "./pages/Auth/ResetPassword";
+import VerifyEmail from "./pages/Auth/VerifyEmail";
 
 // =========================
 // Application Pages
@@ -89,6 +92,21 @@ function App() {
         <Route
           path="/login"
           element={<Login />}
+        />
+
+        <Route
+          path="/forgot-password"
+          element={<ForgotPassword />}
+        />
+
+        <Route
+          path="/reset-password"
+          element={<ResetPassword />}
+        />
+
+        <Route
+          path="/verify-email"
+          element={<VerifyEmail />}
         />
 
         {/* =====================================
