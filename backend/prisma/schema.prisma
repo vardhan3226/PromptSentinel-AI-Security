@@ -7,39 +7,63 @@ datasource db {
 }
 
 model User {
-  id        String       @id @default(cuid())
-  fullName  String
-  email     String       @unique
-  password  String
-  role      UserRole     @default(USER)
-
-  // Email verification
-  emailVerified         Boolean   @default(false)
-  verificationTokenHash String?
+  id                      String       @id @default(cuid())
+  fullName                String
+  email                   String       @unique
+  password                String
+  role                    UserRole     @default(USER)
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+  emailVerified           Boolean      @default(false)
+  verificationTokenHash   String?
   verificationTokenExpiry DateTime?
+  resetTokenHash          String?
+  resetTokenExpiry        DateTime?
 
-  // Password reset
-  resetTokenHash   String?
-  resetTokenExpiry DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  scans PromptScan[]
+  scans           PromptScan[]
+  aiConversations AIConversation[]
 }
 
 model PromptScan {
-  id             String       @id @default(cuid())
+  id             String      @id @default(cuid())
   prompt         String
   attackType     String?
   threatLevel    ThreatLevel
   confidence     Float
   riskScore      Float
   recommendation String?
-  createdAt      DateTime     @default(now())
+  createdAt      DateTime    @default(now())
   userId         String
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AIConversation {
+  id        String   @id @default(cuid())
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  messages AIMessage[]
+
+  @@index([userId])
+}
+
+model AIMessage {
+  id            String         @id @default(cuid())
+  role          AIMessageRole
+  content       String
+  provider      String?
+  responseStyle String?
+  createdAt     DateTime       @default(now())
+
+  conversationId String
+  conversation   AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
 }
 
 enum UserRole {
@@ -53,4 +77,9 @@ enum ThreatLevel {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+enum AIMessageRole {
+  USER
+  ASSISTANT
 }

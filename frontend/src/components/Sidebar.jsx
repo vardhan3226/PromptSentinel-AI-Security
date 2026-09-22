@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   ScanSearch,
+  Bot,
   History,
   BarChart3,
   User,
@@ -23,6 +24,11 @@ function Sidebar({
       name: "Prompt Scanner",
       path: "/scanner",
       icon: ScanSearch,
+    },
+    {
+      name: "AI Hub",
+      path: "/ai-hub",
+      icon: Bot,
     },
     {
       name: "Scan History",

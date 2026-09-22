@@ -4,11 +4,19 @@ import dotenv from "dotenv";
 
 import authRoutes from "./routes/authRoutes.js";
 import scanRoutes from "./routes/scanRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
+import promptEnhancementRoutes from "./routes/promptEnhancementRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 
 dotenv.config();
 
 const app = express();
+
+/*
+============================================================
+CORS
+============================================================
+*/
 
 app.use(
   cors({
@@ -17,7 +25,19 @@ app.use(
   })
 );
 
+/*
+============================================================
+BODY PARSER
+============================================================
+*/
+
 app.use(express.json());
+
+/*
+============================================================
+HEALTH CHECK
+============================================================
+*/
 
 app.get("/", (req, res) => {
   res.json({
@@ -26,9 +46,41 @@ app.get("/", (req, res) => {
   });
 });
 
+/*
+============================================================
+API ROUTES
+============================================================
+*/
+
 app.use("/api/auth", authRoutes);
+
 app.use("/api/scan", scanRoutes);
-app.use("/api/dashboard", dashboardRoutes);
+
+/*
+AI HUB
+/api/ai/chat
+*/
+app.use("/api/ai", aiRoutes);
+
+/*
+PROMPT ENHANCEMENT
+/api/ai/enhance
+*/
+app.use(
+  "/api/ai",
+  promptEnhancementRoutes
+);
+
+app.use(
+  "/api/dashboard",
+  dashboardRoutes
+);
+
+/*
+============================================================
+404 HANDLER
+============================================================
+*/
 
 app.use((req, res) => {
   res.status(404).json({
@@ -37,17 +89,34 @@ app.use((req, res) => {
   });
 });
 
-app.use((err, req, res, next) => {
-  console.error(err.stack);
+/*
+============================================================
+GLOBAL ERROR HANDLER
+============================================================
+*/
 
-  res.status(500).json({
-    success: false,
-    message: "Internal Server Error",
-  });
-});
+app.use(
+  (err, req, res, next) => {
+    console.error(err.stack);
 
-const PORT = process.env.PORT || 5000;
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+);
+
+/*
+============================================================
+SERVER
+============================================================
+*/
+
+const PORT =
+  process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(
+    `🚀 Server running on http://localhost:${PORT}`
+  );
 });

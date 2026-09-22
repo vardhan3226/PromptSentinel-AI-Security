@@ -35,6 +35,7 @@ import Profile from "./pages/Profile/Profile";
 import PromptScannerPage from "./pages/PromptScannerPage/PromptScanner";
 import ScanHistoryPage from "./pages/ScanHistoryPage/ScanHistory";
 import AnalyticsPage from "./pages/AnalyticsPage/Analytics";
+import AIHub from "./pages/AIHub/AIHub";
 
 function App() {
   return (
@@ -121,6 +122,11 @@ function App() {
         <Route
           path="/scanner"
           element={<PromptScannerPage />}
+        />
+
+        <Route
+          path="/ai-hub"
+          element={<AIHub />}
         />
 
         <Route
