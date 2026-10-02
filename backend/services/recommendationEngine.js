@@ -17,6 +17,11 @@ export function generateRecommendation(
   attackType,
   threatLevel
 ) {
+  // The final fused threat level takes precedence over noisy category labels.
+  if (String(threatLevel).toUpperCase() === "SAFE") {
+    return "Prompt appears safe and can be processed normally.";
+  }
+
   const recommendations = [];
 
   /*

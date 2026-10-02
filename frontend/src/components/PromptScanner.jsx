@@ -1,11 +1,11 @@
 import { useState } from "react";
+import API_BASE_URL from "../config/api";
 
 import {
   ScanSearch,
   ShieldCheck,
   Bug,
   Target,
-  AlertTriangle,
   CheckCircle2,
   XCircle,
   RefreshCw,
@@ -55,7 +55,7 @@ function PromptScanner({
       setRobustnessResult(null);
 
       const response = await fetch(
-        "http://localhost:5000/api/scan/robustness",
+        `${API_BASE_URL}/api/scan/robustness`,
         {
           method: "POST",
           headers: {

@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import Sidebar from "../../components/Sidebar";
 import DashboardContent from "../../components/DashboardContent";
 
 import { generatePDF } from "../../utils/pdf/generateDashboardReport";
-
-const API_BASE_URL = "http://localhost:5000";
+import API_BASE_URL from "../../config/api";
 
 const INITIAL_USER = {
   fullName: "",
@@ -36,21 +35,11 @@ function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
-  const [user, setUser] = useState(
-    INITIAL_USER
-  );
-
-  const [stats, setStats] = useState(
-    INITIAL_STATS
-  );
-
+  const [user, setUser] = useState(INITIAL_USER);
+  const [stats, setStats] = useState(INITIAL_STATS);
   const [history, setHistory] = useState([]);
 
   const token = localStorage.getItem("token");
-
-  /* ============================================================
-     AUTH CHECK
-  ============================================================ */
 
   useEffect(() => {
     if (!token) {
@@ -58,384 +47,174 @@ function Dashboard() {
     }
   }, [token, navigate]);
 
-  /* ============================================================
-     COMMON API REQUEST
-  ============================================================ */
-
-  const apiRequest = async (
-    endpoint,
-    options = {}
-  ) => {
+  const apiRequest = useCallback(async (endpoint, options = {}) => {
     if (!token) {
       navigate("/login");
-
-      throw new Error(
-        "Authentication token not found."
-      );
+      throw new Error("Authentication token not found.");
     }
 
-    const response = await fetch(
-      `${API_BASE_URL}${endpoint}`,
-      {
-        ...options,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          ...(options.headers || {}),
-        },
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        ...(options.headers || {}),
+      },
+    });
 
-    if (
-      response.status === 401 ||
-      response.status === 403
-    ) {
+    if (response.status === 401 || response.status === 403) {
       localStorage.removeItem("token");
-
       navigate("/login");
-
-      throw new Error(
-        "Your session has expired. Please login again."
-      );
+      throw new Error("Your session has expired. Please login again.");
     }
 
     let data;
-
     try {
       data = await response.json();
     } catch {
-      throw new Error(
-        `Server returned an invalid response (${response.status}).`
-      );
+      throw new Error(`Server returned an invalid response (${response.status}).`);
     }
 
     if (!response.ok) {
-      throw new Error(
-        data?.message ||
-          `Request failed with status ${response.status}.`
-      );
+      throw new Error(data?.message || `Request failed with status ${response.status}.`);
     }
 
     return data;
-  };
+  }, [token, navigate]);
 
-  /* ============================================================
-     FETCH PROFILE
-  ============================================================ */
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
-      const data = await apiRequest(
-        "/api/auth/profile"
-      );
-
+      const data = await apiRequest("/api/auth/profile");
       if (data.success && data.user) {
         setUser({
-          fullName:
-            data.user.fullName || "",
-          email:
-            data.user.email || "",
-          role:
-            data.user.role || "",
+          fullName: data.user.fullName || "",
+          email: data.user.email || "",
+          role: data.user.role || "",
         });
       }
     } catch (error) {
-      console.error(
-        "Profile fetch error:",
-        error.message
-      );
+      console.error("Profile fetch error:", error.message);
     }
-  };
+  }, [apiRequest]);
 
-  /* ============================================================
-     FORMAT STATS
-  ============================================================ */
-
-  const formatStats = (rawStats) => {
-    const highRiskFindings =
-      Number(rawStats?.highRiskFindings || 0);
-
+  const formatStats = useCallback((rawStats) => {
+    const highRiskFindings = Number(rawStats?.highRiskFindings || 0);
     return {
-      totalScans:
-        Number(rawStats?.totalScans || 0),
-
-      safePrompts:
-        Number(rawStats?.safePrompts || 0),
-
-      lowRiskPrompts:
-        Number(rawStats?.lowRiskPrompts || 0),
-
-      mediumRiskPrompts:
-        Number(rawStats?.mediumRiskPrompts || 0),
-
-      highRiskPrompts:
-        Number(rawStats?.highRiskPrompts || 0),
-
-      criticalRiskPrompts:
-        Number(
-          rawStats?.criticalRiskPrompts || 0
-        ),
-
+      totalScans: Number(rawStats?.totalScans || 0),
+      safePrompts: Number(rawStats?.safePrompts || 0),
+      lowRiskPrompts: Number(rawStats?.lowRiskPrompts || 0),
+      mediumRiskPrompts: Number(rawStats?.mediumRiskPrompts || 0),
+      highRiskPrompts: Number(rawStats?.highRiskPrompts || 0),
+      criticalRiskPrompts: Number(rawStats?.criticalRiskPrompts || 0),
       highRiskFindings,
-
       threatsBlocked: highRiskFindings,
-
-      averageRiskScore:
-        Number(
-          rawStats?.averageRiskScore || 0
-        ),
-
-      safePromptRate:
-        Number(
-          rawStats?.safePromptRate || 0
-        ),
-
+      averageRiskScore: Number(rawStats?.averageRiskScore || 0),
+      safePromptRate: Number(rawStats?.safePromptRate || 0),
       threatDistribution:
-        rawStats?.threatDistribution &&
-        typeof rawStats.threatDistribution ===
-          "object"
+        rawStats?.threatDistribution && typeof rawStats.threatDistribution === "object"
           ? rawStats.threatDistribution
           : {},
-
-      attackTypeDistribution:
-        Array.isArray(
-          rawStats?.attackTypeDistribution
-        )
-          ? rawStats.attackTypeDistribution
-          : [],
+      attackTypeDistribution: Array.isArray(rawStats?.attackTypeDistribution)
+        ? rawStats.attackTypeDistribution
+        : [],
     };
-  };
+  }, []);
 
-  /* ============================================================
-     FETCH DASHBOARD STATS
-  ============================================================ */
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
-      const data = await apiRequest(
-        "/api/dashboard/stats"
-      );
-
-      if (
-        data.success &&
-        data.stats
-      ) {
-        setStats(
-          formatStats(data.stats)
-        );
+      const data = await apiRequest("/api/dashboard/stats");
+      if (data.success && data.stats) {
+        setStats(formatStats(data.stats));
       }
     } catch (error) {
-      console.error(
-        "Stats fetch error:",
-        error.message
-      );
+      console.error("Stats fetch error:", error.message);
     }
-  };
+  }, [apiRequest, formatStats]);
 
-  /* ============================================================
-     FETCH HISTORY
-  ============================================================ */
-
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     try {
-      const data = await apiRequest(
-        "/api/scan/history"
-      );
-
+      const data = await apiRequest("/api/scan/history");
       if (data.success) {
-        setHistory(
-          Array.isArray(data.history)
-            ? data.history
-            : []
-        );
+        setHistory(Array.isArray(data.history) ? data.history : []);
       }
     } catch (error) {
-      console.error(
-        "History fetch error:",
-        error.message
-      );
+      console.error("History fetch error:", error.message);
     }
-  };
-
-  /* ============================================================
-     INITIAL LOAD
-  ============================================================ */
+  }, [apiRequest]);
 
   useEffect(() => {
-    if (!token) {
-      return;
-    }
+    if (!token) return;
 
-    const loadDashboard = async () => {
-      await Promise.all([
-        fetchProfile(),
-        fetchStats(),
-        fetchHistory(),
-      ]);
-    };
+    const timer = setTimeout(() => {
+      Promise.all([fetchProfile(), fetchStats(), fetchHistory()]);
+    }, 0);
 
-    loadDashboard();
-  }, [token]);
-
-  /* ============================================================
-     REFRESH STATS
-  ============================================================ */
+    return () => clearTimeout(timer);
+  }, [token, fetchProfile, fetchStats, fetchHistory]);
 
   const refreshStats = async () => {
     await fetchStats();
   };
 
-  /* ============================================================
-     REFRESH HISTORY
-  ============================================================ */
-
   const refreshHistory = async () => {
     await fetchHistory();
   };
 
-  /* ============================================================
-     SCAN PROMPT
-  ============================================================ */
-
   const handleScan = async () => {
-    const trimmedPrompt =
-      prompt.trim();
-
+    const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt) {
-      alert(
-        "Please enter a prompt."
-      );
+      alert("Please enter a prompt.");
       return;
     }
-
-    if (loading) {
-      return;
-    }
+    if (loading) return;
 
     try {
       setLoading(true);
       setResult(null);
 
-      const data = await apiRequest(
-        "/api/scan",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            prompt: trimmedPrompt,
-          }),
-        }
-      );
+      const data = await apiRequest("/api/scan", {
+        method: "POST",
+        body: JSON.stringify({ prompt: trimmedPrompt }),
+      });
 
-      if (
-        data.success &&
-        data.result
-      ) {
+      if (data.success && data.result) {
         setResult(data.result);
-
-        await Promise.all([
-          refreshStats(),
-          refreshHistory(),
-        ]);
-
+        await Promise.all([refreshStats(), refreshHistory()]);
         setPrompt("");
       } else {
-        throw new Error(
-          data?.message ||
-            "Prompt scanning failed."
-        );
+        throw new Error(data?.message || "Prompt scanning failed.");
       }
     } catch (error) {
-      console.error(
-        "Prompt scan error:",
-        error
-      );
-
-      alert(
-        error.message ||
-          "Unable to scan the prompt."
-      );
+      console.error("Prompt scan error:", error);
+      alert(error.message || "Unable to scan the prompt.");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ============================================================
-     LOGOUT
-  ============================================================ */
-
   const handleLogout = () => {
-    localStorage.removeItem(
-      "token"
-    );
-
+    localStorage.removeItem("token");
     setUser(INITIAL_USER);
     setStats(INITIAL_STATS);
     setPrompt("");
     setResult(null);
     setHistory([]);
-
     navigate("/login");
   };
 
-  /* ============================================================
-     EXPORT DASHBOARD
-  ============================================================ */
-
   const handleExportDashboard = () => {
     try {
-      generatePDF(
-        user,
-        stats,
-        history
-      );
+      generatePDF(user, stats, history);
     } catch (error) {
-      console.error(
-        "PDF generation error:",
-        error
-      );
-
-      alert(
-        "Unable to generate the dashboard report."
-      );
+      console.error("PDF generation error:", error);
+      alert("Unable to generate the dashboard report.");
     }
   };
 
-  /* ============================================================
-     RENDER
-  ============================================================ */
-
   return (
-    <div
-      className="
-        min-h-dvh
-        w-full
-        overflow-x-hidden
-        bg-[#f6f9fc]
-      "
-    >
-      {/* =====================================================
-          FIXED SIDEBAR
-      ===================================================== */}
-
-      <Sidebar
-        navigate={navigate}
-        handleLogout={handleLogout}
-        active="Dashboard"
-      />
-
-      {/* =====================================================
-          DASHBOARD CONTENT
-      ===================================================== */}
-
-      <main
-        className="
-          ml-65
-          min-h-dvh
-          min-w-0
-          overflow-x-hidden
-          box-border
-        "
-      >
+    <div className="min-h-dvh w-full overflow-x-hidden bg-[#f6f9fc]">
+      <Sidebar navigate={navigate} handleLogout={handleLogout} active="Dashboard" />
+      <main className="ml-65 min-h-dvh min-w-0 overflow-x-hidden box-border">
         <DashboardContent
           user={user}
           stats={stats}
@@ -445,9 +224,7 @@ function Dashboard() {
           loading={loading}
           result={result}
           recentScans={history}
-          handleExportDashboard={
-            handleExportDashboard
-          }
+          handleExportDashboard={handleExportDashboard}
         />
       </main>
     </div>

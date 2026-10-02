@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import Sidebar from "../../components/Sidebar";
 import PromptScanner from "../../components/PromptScanner";
 import ResultCard from "../../components/ResultCard";
 import ScanProgress from "../../components/ScanProgress";
+import API_BASE_URL from "../../config/api";
 
 import {
   ShieldCheck,
@@ -20,6 +21,14 @@ import {
 
 function PromptScannerPage() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
 
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
@@ -97,7 +106,7 @@ function PromptScannerPage() {
       setSelectedPrompt("");
 
       const response = await fetch(
-        "http://localhost:5000/api/ai/enhance",
+        `${API_BASE_URL}/api/ai/enhance`,
         {
           method: "POST",
 
@@ -314,7 +323,7 @@ function PromptScannerPage() {
       const originalPrompt = prompt.trim();
 
       const response = await fetch(
-        "http://localhost:5000/api/scan",
+        `${API_BASE_URL}/api/scan`,
         {
           method: "POST",
 

@@ -1,8 +1,9 @@
-import benchmarkDataset from "./benchmarkDataset.js";
+
+import benchmarkUnseenDataset from "./benchmarkUnseenDataset.js";
 import { detectAttack } from "./detectionEngine.js";
 import { analyzeSemanticSimilarity } from "./semanticSimilarityService.js";
 
-// Determine whether the local detection engine detected a threat.
+// Check local detection.
 function isLocalDetected(result) {
   return Boolean(
     result?.threatLevel &&
@@ -10,20 +11,36 @@ function isLocalDetected(result) {
   );
 }
 
-// Determine whether the semantic engine detected a threat.
-function isSemanticDetected(semanticResult) {
-  return semanticResult?.detected === true;
+// Check semantic detection.
+function isSemanticDetected(result) {
+  return result?.detected === true;
 }
 
-// Combine local and semantic detection results.
-function isMalicious(result, semanticResult) {
-  return (
-    isLocalDetected(result) ||
-    isSemanticDetected(semanticResult)
-  );
+// Combine both detection engines.
+function classifyPrompt(prompt) {
+  const localResult = detectAttack(prompt);
+  const semanticResult =
+    analyzeSemanticSimilarity(prompt);
+
+  const localDetected = isLocalDetected(localResult);
+  const semanticDetected =
+    isSemanticDetected(semanticResult);
+
+  return {
+    predictedThreat:
+      localDetected || semanticDetected
+        ? "MALICIOUS"
+        : "SAFE",
+    localDetected,
+    semanticDetected,
+    localThreatLevel:
+      localResult?.threatLevel ?? "SAFE",
+    similarityScore:
+      semanticResult?.similarityScore ?? 0,
+  };
 }
 
-// Calculate benchmark evaluation metrics.
+// Calculate evaluation metrics.
 function calculateMetrics(results) {
   let truePositive = 0;
   let trueNegative = 0;
@@ -76,7 +93,8 @@ function calculateMetrics(results) {
 
   const f1Score =
     precision + recall > 0
-      ? (2 * precision * recall) / (precision + recall)
+      ? (2 * precision * recall) /
+        (precision + recall)
       : 0;
 
   return {
@@ -92,64 +110,41 @@ function calculateMetrics(results) {
   };
 }
 
-// Run the benchmark against the existing dataset.
-export function runBenchmark() {
+// Run the unseen benchmark.
+export function runUnseenBenchmark() {
   const results = [];
 
-  for (const testCase of benchmarkDataset) {
-    const localResult = detectAttack(testCase.prompt);
-
-    const semanticResult =
-      analyzeSemanticSimilarity(testCase.prompt);
-
-    const localDetected = isLocalDetected(localResult);
-
-    const semanticDetected =
-      isSemanticDetected(semanticResult);
-
-    const predictedThreat =
-      isMalicious(localResult, semanticResult)
-        ? "MALICIOUS"
-        : "SAFE";
+  for (const testCase of benchmarkUnseenDataset) {
+    const detection = classifyPrompt(testCase.prompt);
 
     results.push({
       id: testCase.id,
       category: testCase.category,
       prompt: testCase.prompt,
       expectedThreat: testCase.expectedThreat,
-      predictedThreat,
-
+      predictedThreat: detection.predictedThreat,
       correct:
-        testCase.expectedThreat === predictedThreat,
-
-      localDetected,
-      semanticDetected,
-
-      localThreatLevel:
-        localResult?.threatLevel ?? "SAFE",
-
-      localAttackType:
-        localResult?.attackType ?? "Safe Prompt",
-
-      similarityScore:
-        semanticResult?.similarityScore ?? 0,
+        testCase.expectedThreat ===
+        detection.predictedThreat,
+      localDetected: detection.localDetected,
+      semanticDetected: detection.semanticDetected,
+      localThreatLevel: detection.localThreatLevel,
+      similarityScore: detection.similarityScore,
     });
   }
 
-  const metrics = calculateMetrics(results);
-
   return {
-    metrics,
+    metrics: calculateMetrics(results),
     results,
   };
 }
 
-// Print the benchmark report.
-function printBenchmarkReport(report) {
+// Print the unseen benchmark report.
+function printUnseenBenchmarkReport(report) {
   console.log("");
   console.log("=================================");
   console.log("PROMPTSENTINEL");
-  console.log("DAY 3 BENCHMARK");
+  console.log("UNSEEN PROMPT EVALUATION");
   console.log("=================================");
 
   console.log("");
@@ -191,15 +186,14 @@ function printBenchmarkReport(report) {
 
   console.log("");
   console.log("=================================");
-  console.log("BENCHMARK COMPLETED");
+  console.log("UNSEEN BENCHMARK COMPLETED");
   console.log("=================================");
 }
 
-// Execute the benchmark when this file is run directly.
+// Execute when this file is run directly.
 if (
-  process.argv[1]?.endsWith("benchmarkRunner.js")
+  process.argv[1]?.endsWith("benchmarkUnseenRunner.js")
 ) {
-  const report = runBenchmark();
-
-  printBenchmarkReport(report);
+  const report = runUnseenBenchmark();
+  printUnseenBenchmarkReport(report);
 }

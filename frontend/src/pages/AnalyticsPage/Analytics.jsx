@@ -9,6 +9,7 @@ import {
 
 import Sidebar from "../../components/Sidebar";
 import AnalyticsChart from "../../components/AnalyticsChart";
+import API_BASE_URL from "../../config/api";
 
 function Analytics() {
   const navigate = useNavigate();
@@ -43,10 +44,8 @@ function Analytics() {
     }
 
     try {
-      setLoading(true);
-
       const response = await fetch(
-        "http://localhost:5000/api/dashboard/stats",
+        `${API_BASE_URL}/api/dashboard/stats`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -79,7 +78,12 @@ function Analytics() {
   };
 
   useEffect(() => {
-    loadAnalytics();
+    const timer = setTimeout(() => {
+      loadAnalytics();
+    }, 0);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ==================================================
@@ -128,6 +132,134 @@ function Analytics() {
       : 0;
 
   // ==================================================
+  // NEW ANALYTICS DATA
+  // ==================================================
+
+  const scanActivity = Array.isArray(
+    stats?.scanActivity
+  )
+    ? stats.scanActivity
+    : [];
+
+  const dailyThreatActivity = Array.isArray(
+    stats?.dailyThreatActivity
+  )
+    ? stats.dailyThreatActivity
+    : [];
+
+  // ==================================================
+  // 7-DAY SCAN ACTIVITY HELPERS
+  // ==================================================
+
+  const maxDailyScans = Math.max(
+    1,
+    ...scanActivity.map(
+      (item) =>
+        Number(item?.scans || 0)
+    )
+  );
+
+  const formatActivityDate = (dateValue) => {
+    if (!dateValue) {
+      return "--";
+    }
+
+    try {
+      const date = new Date(
+        `${dateValue}T00:00:00`
+      );
+
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
+        return dateValue;
+      }
+
+      return date.toLocaleDateString(
+        "en-IN",
+        {
+          day: "2-digit",
+          month: "short",
+        }
+      );
+    } catch {
+      return dateValue;
+    }
+  };
+
+  const formatActivityDay = (dateValue) => {
+    if (!dateValue) {
+      return "--";
+    }
+
+    try {
+      const date = new Date(
+        `${dateValue}T00:00:00`
+      );
+
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
+        return "--";
+      }
+
+      return date.toLocaleDateString(
+        "en-IN",
+        {
+          weekday: "short",
+        }
+      );
+    } catch {
+      return "--";
+    }
+  };
+
+  // ==================================================
+  // THREAT ACTIVITY TOTALS
+  // ==================================================
+
+  const threatActivityTotals = {
+    safe: dailyThreatActivity.reduce(
+      (total, item) =>
+        total +
+        Number(item?.safe || 0),
+      0
+    ),
+
+    low: dailyThreatActivity.reduce(
+      (total, item) =>
+        total +
+        Number(item?.low || 0),
+      0
+    ),
+
+    medium: dailyThreatActivity.reduce(
+      (total, item) =>
+        total +
+        Number(item?.medium || 0),
+      0
+    ),
+
+    high: dailyThreatActivity.reduce(
+      (total, item) =>
+        total +
+        Number(item?.high || 0),
+      0
+    ),
+
+    critical: dailyThreatActivity.reduce(
+      (total, item) =>
+        total +
+        Number(item?.critical || 0),
+      0
+    ),
+  };
+
+  // ==================================================
   // PAGE
   // ==================================================
 
@@ -146,9 +278,6 @@ function Analytics() {
 
       {/* ==================================================
           MAIN PAGE
-
-          Sidebar = 260px
-          Main automatically uses remaining width
       ================================================== */}
 
       <main
@@ -413,7 +542,7 @@ function Analytics() {
           </section>
 
           {/* ==================================================
-              CHART
+              EXISTING ANALYTICS CHART
           ================================================== */}
 
           <section
@@ -457,6 +586,699 @@ function Analytics() {
               />
 
             )}
+
+          </section>
+
+          {/* ==================================================
+              7-DAY SCAN ACTIVITY
+          ================================================== */}
+
+          <section
+            className="
+              mt-5
+              w-full
+              min-w-0
+              rounded-[20px]
+              border
+              border-slate-200
+              bg-white
+              p-5
+              shadow-sm
+            "
+          >
+
+            <div
+              className="
+                flex
+                flex-col
+                gap-1
+                sm:flex-row
+                sm:items-center
+                sm:justify-between
+              "
+            >
+
+              <div>
+
+                <h2 className="text-lg font-bold text-[#102a63]">
+                  7-Day Scan Activity
+                </h2>
+
+                <p className="mt-1 text-xs text-slate-400">
+                  Number of security scans performed each day.
+                </p>
+
+              </div>
+
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-2
+                  text-xs
+                  font-semibold
+                  text-blue-600
+                "
+              >
+                <BarChart3 size={17} />
+                <span>
+                  Last 7 days
+                </span>
+              </div>
+
+            </div>
+
+            {scanActivity.length > 0 ? (
+
+              <div className="mt-6">
+
+                <div
+                  className="
+                    flex
+                    h-56
+                    items-end
+                    gap-2
+                    overflow-x-auto
+                    pb-1
+                    sm:gap-4
+                  "
+                >
+
+                  {scanActivity.map(
+                    (item, index) => {
+
+                      const scanCount =
+                        Number(
+                          item?.scans || 0
+                        );
+
+                      const barHeight =
+                        scanCount === 0
+                          ? 4
+                          : Math.max(
+                              8,
+                              Math.round(
+                                (scanCount /
+                                  maxDailyScans) *
+                                  100
+                              )
+                            );
+
+                      return (
+                        <div
+                          key={
+                            item?.date ||
+                            index
+                          }
+                          className="
+                            flex
+                            min-w-[58px]
+                            flex-1
+                            flex-col
+                            items-center
+                            justify-end
+                            gap-2
+                          "
+                        >
+
+                          <span
+                            className="
+                              text-xs
+                              font-bold
+                              text-slate-600
+                            "
+                          >
+                            {scanCount}
+                          </span>
+
+                          <div
+                            className="
+                              flex
+                              h-40
+                              w-full
+                              max-w-[64px]
+                              items-end
+                              rounded-xl
+                              bg-slate-100
+                              p-1
+                            "
+                          >
+
+                            <div
+                              className="
+                                w-full
+                                rounded-lg
+                                bg-blue-500
+                                transition-all
+                              "
+                              style={{
+                                height: `${barHeight}%`,
+                              }}
+                              title={`${scanCount} scans`}
+                            />
+
+                          </div>
+
+                          <div className="text-center">
+
+                            <p
+                              className="
+                                text-[11px]
+                                font-bold
+                                text-slate-700
+                              "
+                            >
+                              {formatActivityDay(
+                                item?.date
+                              )}
+                            </p>
+
+                            <p
+                              className="
+                                mt-0.5
+                                text-[10px]
+                                text-slate-400
+                              "
+                            >
+                              {formatActivityDate(
+                                item?.date
+                              )}
+                            </p>
+
+                          </div>
+
+                        </div>
+                      );
+                    }
+                  )}
+
+                </div>
+
+              </div>
+
+            ) : (
+
+              <div
+                className="
+                  mt-5
+                  rounded-xl
+                  border
+                  border-dashed
+                  border-slate-200
+                  bg-slate-50
+                  px-5
+                  py-10
+                  text-center
+                "
+              >
+
+                <BarChart3
+                  size={28}
+                  className="mx-auto text-slate-300"
+                />
+
+                <p className="mt-2 text-sm font-semibold text-slate-500">
+                  No scan activity available yet.
+                </p>
+
+                <p className="mt-1 text-xs text-slate-400">
+                  Scan prompts to generate activity data.
+                </p>
+
+              </div>
+
+            )}
+
+          </section>
+
+          {/* ==================================================
+              DAILY THREAT ACTIVITY
+          ================================================== */}
+
+          <section
+            className="
+              mt-5
+              w-full
+              min-w-0
+              overflow-hidden
+              rounded-[20px]
+              border
+              border-slate-200
+              bg-white
+              shadow-sm
+            "
+          >
+
+            <div className="p-5">
+
+              <div
+                className="
+                  flex
+                  flex-col
+                  gap-1
+                  sm:flex-row
+                  sm:items-center
+                  sm:justify-between
+                "
+              >
+
+                <div>
+
+                  <h2 className="text-lg font-bold text-[#102a63]">
+                    Daily Threat Activity
+                  </h2>
+
+                  <p className="mt-1 text-xs text-slate-400">
+                    Threat-level breakdown from your recent scans.
+                  </p>
+
+                </div>
+
+                <div
+                  className="
+                    flex
+                    items-center
+                    gap-2
+                    text-xs
+                    font-semibold
+                    text-slate-500
+                  "
+                >
+                  <ShieldCheck size={17} />
+                  <span>
+                    Security activity
+                  </span>
+                </div>
+
+              </div>
+
+              {/* THREAT TOTALS */}
+
+              <div
+                className="
+                  mt-5
+                  grid
+                  grid-cols-2
+                  gap-3
+                  sm:grid-cols-5
+                "
+              >
+
+                <div
+                  className="
+                    rounded-xl
+                    border
+                    border-emerald-100
+                    bg-emerald-50
+                    px-3
+                    py-3
+                  "
+                >
+
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-600">
+                    Safe
+                  </p>
+
+                  <p className="mt-1 text-xl font-extrabold text-emerald-700">
+                    {threatActivityTotals.safe}
+                  </p>
+
+                </div>
+
+                <div
+                  className="
+                    rounded-xl
+                    border
+                    border-amber-100
+                    bg-amber-50
+                    px-3
+                    py-3
+                  "
+                >
+
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-amber-600">
+                    Low
+                  </p>
+
+                  <p className="mt-1 text-xl font-extrabold text-amber-700">
+                    {threatActivityTotals.low}
+                  </p>
+
+                </div>
+
+                <div
+                  className="
+                    rounded-xl
+                    border
+                    border-orange-100
+                    bg-orange-50
+                    px-3
+                    py-3
+                  "
+                >
+
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-orange-600">
+                    Medium
+                  </p>
+
+                  <p className="mt-1 text-xl font-extrabold text-orange-700">
+                    {threatActivityTotals.medium}
+                  </p>
+
+                </div>
+
+                <div
+                  className="
+                    rounded-xl
+                    border
+                    border-red-100
+                    bg-red-50
+                    px-3
+                    py-3
+                  "
+                >
+
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-red-600">
+                    High
+                  </p>
+
+                  <p className="mt-1 text-xl font-extrabold text-red-700">
+                    {threatActivityTotals.high}
+                  </p>
+
+                </div>
+
+                <div
+                  className="
+                    rounded-xl
+                    border
+                    border-rose-100
+                    bg-rose-50
+                    px-3
+                    py-3
+                  "
+                >
+
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-rose-600">
+                    Critical
+                  </p>
+
+                  <p className="mt-1 text-xl font-extrabold text-rose-700">
+                    {threatActivityTotals.critical}
+                  </p>
+
+                </div>
+
+              </div>
+
+              {/* DAILY TABLE */}
+
+              {dailyThreatActivity.length > 0 ? (
+
+                <div className="mt-6 overflow-x-auto">
+
+                  <table className="w-full min-w-[700px] border-collapse">
+
+                    <thead>
+
+                      <tr className="border-b border-slate-100">
+
+                        <th
+                          className="
+                            px-3
+                            py-3
+                            text-left
+                            text-[10px]
+                            font-bold
+                            uppercase
+                            tracking-wider
+                            text-slate-400
+                          "
+                        >
+                          Date
+                        </th>
+
+                        <th
+                          className="
+                            px-3
+                            py-3
+                            text-center
+                            text-[10px]
+                            font-bold
+                            uppercase
+                            tracking-wider
+                            text-slate-400
+                          "
+                        >
+                          Total
+                        </th>
+
+                        <th
+                          className="
+                            px-3
+                            py-3
+                            text-center
+                            text-[10px]
+                            font-bold
+                            uppercase
+                            tracking-wider
+                            text-emerald-500
+                          "
+                        >
+                          Safe
+                        </th>
+
+                        <th
+                          className="
+                            px-3
+                            py-3
+                            text-center
+                            text-[10px]
+                            font-bold
+                            uppercase
+                            tracking-wider
+                            text-amber-500
+                          "
+                        >
+                          Low
+                        </th>
+
+                        <th
+                          className="
+                            px-3
+                            py-3
+                            text-center
+                            text-[10px]
+                            font-bold
+                            uppercase
+                            tracking-wider
+                            text-orange-500
+                          "
+                        >
+                          Medium
+                        </th>
+
+                        <th
+                          className="
+                            px-3
+                            py-3
+                            text-center
+                            text-[10px]
+                            font-bold
+                            uppercase
+                            tracking-wider
+                            text-red-500
+                          "
+                        >
+                          High
+                        </th>
+
+                        <th
+                          className="
+                            px-3
+                            py-3
+                            text-center
+                            text-[10px]
+                            font-bold
+                            uppercase
+                            tracking-wider
+                            text-rose-500
+                          "
+                        >
+                          Critical
+                        </th>
+
+                      </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                      {dailyThreatActivity.map(
+                        (item, index) => (
+
+                          <tr
+                            key={
+                              item?.date ||
+                              index
+                            }
+                            className="
+                              border-b
+                              border-slate-50
+                              transition
+                              hover:bg-slate-50
+                            "
+                          >
+
+                            <td
+                              className="
+                                px-3
+                                py-3
+                                text-sm
+                                font-semibold
+                                text-slate-700
+                              "
+                            >
+                              {formatActivityDate(
+                                item?.date
+                              )}
+                            </td>
+
+                            <td
+                              className="
+                                px-3
+                                py-3
+                                text-center
+                                text-sm
+                                font-bold
+                                text-blue-600
+                              "
+                            >
+                              {Number(
+                                item?.total || 0
+                              )}
+                            </td>
+
+                            <td
+                              className="
+                                px-3
+                                py-3
+                                text-center
+                                text-sm
+                                font-semibold
+                                text-emerald-600
+                              "
+                            >
+                              {Number(
+                                item?.safe || 0
+                              )}
+                            </td>
+
+                            <td
+                              className="
+                                px-3
+                                py-3
+                                text-center
+                                text-sm
+                                font-semibold
+                                text-amber-600
+                              "
+                            >
+                              {Number(
+                                item?.low || 0
+                              )}
+                            </td>
+
+                            <td
+                              className="
+                                px-3
+                                py-3
+                                text-center
+                                text-sm
+                                font-semibold
+                                text-orange-600
+                              "
+                            >
+                              {Number(
+                                item?.medium || 0
+                              )}
+                            </td>
+
+                            <td
+                              className="
+                                px-3
+                                py-3
+                                text-center
+                                text-sm
+                                font-semibold
+                                text-red-600
+                              "
+                            >
+                              {Number(
+                                item?.high || 0
+                              )}
+                            </td>
+
+                            <td
+                              className="
+                                px-3
+                                py-3
+                                text-center
+                                text-sm
+                                font-semibold
+                                text-rose-600
+                              "
+                            >
+                              {Number(
+                                item?.critical || 0
+                              )}
+                            </td>
+
+                          </tr>
+
+                        )
+                      )}
+
+                    </tbody>
+
+                  </table>
+
+                </div>
+
+              ) : (
+
+                <div
+                  className="
+                    mt-5
+                    rounded-xl
+                    border
+                    border-dashed
+                    border-slate-200
+                    bg-slate-50
+                    px-5
+                    py-10
+                    text-center
+                  "
+                >
+
+                  <ShieldCheck
+                    size={28}
+                    className="mx-auto text-slate-300"
+                  />
+
+                  <p className="mt-2 text-sm font-semibold text-slate-500">
+                    No daily threat activity available yet.
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-400">
+                    Security scan activity will appear here.
+                  </p>
+
+                </div>
+
+              )}
+
+            </div>
 
           </section>
 

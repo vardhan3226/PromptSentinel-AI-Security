@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-
-const API_URL = "http://localhost:5000/api";
+import API_BASE_URL from "../../config/api";
 
 function VerifyEmail() {
   const [searchParams] = useSearchParams();
@@ -26,7 +25,7 @@ function VerifyEmail() {
 
       try {
         const response = await fetch(
-          `${API_URL}/auth/verify-email?token=${encodeURIComponent(
+          `${API_BASE_URL}/api/auth/verify-email?token=${encodeURIComponent(
             token
           )}&email=${encodeURIComponent(email)}`
         );

@@ -4,6 +4,10 @@ import prisma from "../lib/prisma.js";
 |--------------------------------------------------------------------------
 | Dashboard / Analytics Statistics
 |--------------------------------------------------------------------------
+|
+| All analytics are calculated from the authenticated user's PromptScan
+| records stored in PostgreSQL.
+|
 */
 
 export const getDashboardStats = async (userId) => {
@@ -16,6 +20,11 @@ export const getDashboardStats = async (userId) => {
       threatLevel: true,
       riskScore: true,
       attackType: true,
+      createdAt: true,
+    },
+
+    orderBy: {
+      createdAt: "desc",
     },
   });
 
@@ -58,7 +67,7 @@ export const getDashboardStats = async (userId) => {
   | 3. High-Risk Findings
   |--------------------------------------------------------------------------
   |
-  | HIGH + CRITICAL = High-Risk Findings
+  | HIGH + CRITICAL
   |
   */
 
@@ -116,7 +125,7 @@ export const getDashboardStats = async (userId) => {
   | 7. Threat Distribution
   |--------------------------------------------------------------------------
   |
-  | Used by the donut/pie chart.
+  | Used by Analytics charts.
   |
   */
 
@@ -157,13 +166,13 @@ export const getDashboardStats = async (userId) => {
   | 8. Attack-Type Distribution
   |--------------------------------------------------------------------------
   |
-  | One scan can contain multiple attack categories.
+  | A scan may contain multiple attack categories.
   |
   | Example:
   |
   | Prompt Injection, System Prompt Extraction
   |
-  | Both categories are counted separately.
+  | Both categories are counted independently.
   |
   */
 
@@ -206,7 +215,113 @@ export const getDashboardStats = async (userId) => {
 
   /*
   |--------------------------------------------------------------------------
-  | 10. Return Final Analytics Data
+  | 10. Scan Activity - Last 7 Days
+  |--------------------------------------------------------------------------
+  |
+  | Provides real database-backed daily scan activity.
+  |
+  */
+
+  const scanActivity = [];
+
+  const now = new Date();
+
+  for (let index = 6; index >= 0; index -= 1) {
+    const date = new Date(now);
+
+    date.setDate(
+      date.getDate() - index
+    );
+
+    const dateKey = date
+      .toISOString()
+      .slice(0, 10);
+
+    const dayScans = scans.filter(
+      (scan) => {
+        if (!scan.createdAt) {
+          return false;
+        }
+
+        return (
+          new Date(scan.createdAt)
+            .toISOString()
+            .slice(0, 10) === dateKey
+        );
+      }
+    );
+
+    scanActivity.push({
+      date: dateKey,
+      scans: dayScans.length,
+    });
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | 11. Daily Threat Activity - Last 7 Days
+  |--------------------------------------------------------------------------
+  |
+  | Gives the Analytics page a day-by-day security breakdown.
+  |
+  */
+
+  const dailyThreatActivity = [];
+
+  const threatLevels = [
+    "SAFE",
+    "LOW",
+    "MEDIUM",
+    "HIGH",
+    "CRITICAL",
+  ];
+
+  for (let index = 6; index >= 0; index -= 1) {
+    const date = new Date(now);
+
+    date.setDate(
+      date.getDate() - index
+    );
+
+    const dateKey = date
+      .toISOString()
+      .slice(0, 10);
+
+    const dayScans = scans.filter(
+      (scan) => {
+        if (!scan.createdAt) {
+          return false;
+        }
+
+        return (
+          new Date(scan.createdAt)
+            .toISOString()
+            .slice(0, 10) === dateKey
+        );
+      }
+    );
+
+    const dayData = {
+      date: dateKey,
+      total: dayScans.length,
+    };
+
+    threatLevels.forEach(
+      (level) => {
+        dayData[level.toLowerCase()] =
+          dayScans.filter(
+            (scan) =>
+              scan.threatLevel === level
+          ).length;
+      }
+    );
+
+    dailyThreatActivity.push(dayData);
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | 12. Return Final Analytics Data
   |--------------------------------------------------------------------------
   */
 
@@ -246,5 +361,13 @@ export const getDashboardStats = async (userId) => {
     threatDistribution,
 
     attackTypeDistribution,
+
+    /*
+    | Trend / activity data
+    */
+
+    scanActivity,
+
+    dailyThreatActivity,
   };
 };

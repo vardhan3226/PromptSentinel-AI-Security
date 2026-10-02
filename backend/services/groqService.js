@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { maskSensitiveData } from "./piiSecretDetector.js";
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
@@ -793,6 +794,8 @@ export async function analyzeWithGroq(
     return null;
   }
 
+  const providerPrompt = maskSensitiveData(prompt);
+
   console.log(
     "✅ API Key: Loaded"
   );
@@ -809,7 +812,7 @@ export async function analyzeWithGroq(
 
     const response =
       await sendStructuredRequest(
-        prompt
+        providerPrompt
       );
 
     const result =
@@ -854,7 +857,7 @@ export async function analyzeWithGroq(
 
     const fallbackResponse =
       await sendJsonObjectRequest(
-        prompt
+        providerPrompt
       );
 
     const fallbackResult =

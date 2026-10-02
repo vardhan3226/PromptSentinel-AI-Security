@@ -666,12 +666,16 @@ export const analyzePrompt = async (
         )
       : [];
 
+  // Do not surface attack classifications when the fused decision is SAFE.
+  // Evidence remains available separately for diagnostics and review.
   const detectedAttacks =
-    combineUnique(
-      localAttackTypes,
-      aiAttackTypes,
-      semanticAttackTypes
-    );
+    String(fusionResult.threatLevel).toUpperCase() === "SAFE"
+      ? []
+      : combineUnique(
+          localAttackTypes,
+          aiAttackTypes,
+          semanticAttackTypes
+        );
 
   const finalAttackType =
     detectedAttacks.length > 0

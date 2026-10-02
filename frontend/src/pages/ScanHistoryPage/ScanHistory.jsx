@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   History,
   RefreshCw,
@@ -10,6 +10,7 @@ import HistoryTable from "../../components/HistoryTable";
 
 import { generateHistoryReport } from "../../utils/pdf/generateHistoryReport";
 import { generateHistoryCSV } from "../../utils/pdf/generateHistoryCSV";
+import API_BASE_URL from "../../config/api";
 
 function ScanHistory() {
   const [history, setHistory] = useState([]);
@@ -21,24 +22,20 @@ function ScanHistory() {
   // TOKEN
   // ==================================================
 
-  const getToken = () => {
-    return (
-      localStorage.getItem("token") ||
-      localStorage.getItem("accessToken") ||
-      localStorage.getItem("authToken")
-    );
-  };
 
   // ==================================================
   // LOAD HISTORY
   // ==================================================
 
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
 
-      const token = getToken();
+      const token =
+        localStorage.getItem("token") ||
+        localStorage.getItem("accessToken") ||
+        localStorage.getItem("authToken");
 
       if (!token) {
         setError(
@@ -50,7 +47,7 @@ function ScanHistory() {
       }
 
       const response = await fetch(
-        "http://localhost:5000/api/scan/history",
+        `${API_BASE_URL}/api/scan/history`,
         {
           method: "GET",
           headers: {
@@ -110,15 +107,20 @@ function ScanHistory() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // ==================================================
   // INITIAL LOAD
   // ==================================================
 
+  // Initial history load is deferred to the next task to avoid a synchronous effect update.
   useEffect(() => {
-    loadHistory();
-  }, []);
+    const timer = setTimeout(() => {
+      loadHistory();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [loadHistory]);
 
   // ==================================================
   // LOGOUT

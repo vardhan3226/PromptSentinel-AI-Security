@@ -1,3 +1,4 @@
+
 import {
   analyzePrompt,
   getScanHistory,
@@ -5,19 +6,43 @@ import {
 
 import testAttackRobustness from "../services/robustnessTestService.js";
 
+// Validate prompt input before processing
+const validatePrompt = (prompt) => {
+  if (typeof prompt !== "string") {
+    return {
+      valid: false,
+      message: "Prompt must be a string.",
+    };
+  }
+
+  if (prompt.trim() === "") {
+    return {
+      valid: false,
+      message: "Prompt is required.",
+    };
+  }
+
+  return {
+    valid: true,
+    prompt: prompt.trim(),
+  };
+};
+
 export const scanPrompt = async (req, res) => {
   try {
-    const { prompt } = req.body;
+    const prompt = req.body?.prompt;
 
-    if (!prompt || prompt.trim() === "") {
+    const validation = validatePrompt(prompt);
+
+    if (!validation.valid) {
       return res.status(400).json({
         success: false,
-        message: "Prompt is required.",
+        message: validation.message,
       });
     }
 
     const result = await analyzePrompt(
-      prompt,
+      validation.prompt,
       req.user.id
     );
 
@@ -66,17 +91,20 @@ export const scanRobustness = async (
   res
 ) => {
   try {
-    const { prompt } = req.body;
+    const prompt = req.body?.prompt;
 
-    if (!prompt || prompt.trim() === "") {
+    const validation = validatePrompt(prompt);
+
+    if (!validation.valid) {
       return res.status(400).json({
         success: false,
-        message: "Prompt is required.",
+        message: validation.message,
       });
     }
 
-    const result =
-      testAttackRobustness(prompt);
+    const result = testAttackRobustness(
+      validation.prompt
+    );
 
     return res.status(200).json({
       success: true,

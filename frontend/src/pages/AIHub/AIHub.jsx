@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   Bot,
   Sparkles,
@@ -10,8 +12,7 @@ import {
 } from "lucide-react";
 
 import Sidebar from "../../components/Sidebar";
-
-const API_BASE_URL = "http://localhost:5000";
+import API_BASE_URL from "../../config/api";
 
 function AIHub() {
   const navigate = useNavigate();
@@ -151,30 +152,6 @@ function AIHub() {
       active: true,
       badge: "Connected",
     },
-    {
-      id: "chatgpt",
-      name: "ChatGPT",
-      description: "OpenAI assistant",
-      icon: Bot,
-      active: false,
-      badge: "Next",
-    },
-    {
-      id: "grok",
-      name: "Grok",
-      description: "xAI assistant",
-      icon: Sparkles,
-      active: false,
-      badge: "Next",
-    },
-    {
-      id: "gemini",
-      name: "Gemini",
-      description: "Google AI assistant",
-      icon: Sparkles,
-      active: false,
-      badge: "Next",
-    },
   ];
 
   const [selectedProvider, setSelectedProvider] = useState("groq");
@@ -289,22 +266,27 @@ function AIHub() {
 
   useEffect(() => {
     const incomingPrompt = location.state?.prompt;
-    const incomingSecurityResult = location.state?.securityResult;
+    const incomingSecurityResult =
+      location.state?.securityResult;
 
-    if (
-      typeof incomingPrompt === "string" &&
-      incomingPrompt.trim()
-    ) {
-      setPrompt(incomingPrompt);
-      setConversation([]);
-      setConversationId(null);
-      setAiResult(null);
-      setError("");
-    }
+    const timer = setTimeout(() => {
+      if (
+        typeof incomingPrompt === "string" &&
+        incomingPrompt.trim()
+      ) {
+        setPrompt(incomingPrompt);
+        setConversation([]);
+        setConversationId(null);
+        setAiResult(null);
+        setError("");
+      }
 
-    if (incomingSecurityResult) {
-      setSecurityResult(incomingSecurityResult);
-    }
+      if (incomingSecurityResult) {
+        setSecurityResult(incomingSecurityResult);
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [location.state]);
 
   const handleSend = async () => {
@@ -317,15 +299,6 @@ function AIHub() {
 
     if (!token) {
       navigate("/login");
-      return;
-    }
-
-    if (selectedProvider !== "groq") {
-      setError(
-        `${providers.find(
-          (provider) => provider.id === selectedProvider
-        )?.name} integration will be connected in the next step. Groq is currently available.`
-      );
       return;
     }
 
@@ -617,7 +590,7 @@ function AIHub() {
               </p>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-5 grid max-w-xl grid-cols-1 gap-3">
               {providers.map((provider) => {
                 const Icon = provider.icon;
 
@@ -1215,9 +1188,17 @@ function AIHub() {
                             : "AI Assistant"}
                         </p>
 
-                        <p className="whitespace-pre-wrap text-sm leading-6">
-                          {message.content}
-                        </p>
+                        {message.role === "assistant" ? (
+                          <div className="markdown-content text-sm leading-7 [&_h1]:mb-3 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mb-3 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:mb-2 [&_h3]:font-semibold [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-1 [&_strong]:font-bold [&_table]:mb-4 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-slate-300 [&_th]:bg-slate-100 [&_th]:p-2 [&_td]:border [&_td]:border-slate-300 [&_td]:p-2 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {message.content}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap text-sm leading-6">
+                            {message.content}
+                          </p>
+                        )}
                       </div>
                     </div>
                   );
@@ -1383,9 +1364,11 @@ function AIHub() {
               </div>
 
               <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-5">
-                <p className="whitespace-pre-wrap text-sm leading-7 text-slate-700">
-                  {aiResult.response}
-                </p>
+                <div className="markdown-content text-sm leading-7 text-slate-700 [&_h1]:mb-3 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mb-3 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:mb-2 [&_h3]:font-semibold [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-1 [&_strong]:font-bold [&_table]:mb-4 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-slate-300 [&_th]:bg-slate-100 [&_th]:p-2 [&_td]:border [&_td]:border-slate-300 [&_td]:p-2 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {aiResult.response}
+                  </ReactMarkdown>
+                </div>
               </div>
 
               {aiResult.model && (

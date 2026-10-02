@@ -103,12 +103,6 @@ export function preprocessPrompt(prompt) {
   */
 
   const rolePatterns = [
-    "you are now",
-    "act as",
-    "pretend to be",
-    "roleplay as",
-    "assume the role",
-    "impersonate",
     "you are the system",
     "you are the developer",
     "you are an administrator",
@@ -126,7 +120,6 @@ export function preprocessPrompt(prompt) {
   */
 
   const bypassPatterns = [
-    "bypass",
     "disable safety",
     "remove restrictions",
     "without restrictions",
@@ -201,17 +194,10 @@ export function preprocessPrompt(prompt) {
   const executionPatterns = [
     "execute arbitrary code",
     "run arbitrary code",
-    "execute this code",
-    "run this command",
-    "execute this command",
-    "shell command",
     "powershell",
     "cmd.exe",
     "sudo",
-    "eval(",
-    "exec(",
     "os.system(",
-    "subprocess",
   ];
 
   const executionIndicators =

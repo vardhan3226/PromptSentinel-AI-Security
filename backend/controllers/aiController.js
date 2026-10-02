@@ -8,6 +8,8 @@ import {
 
 import prisma from "../lib/prisma.js";
 
+import { maskSensitiveData } from "../services/piiSecretDetector.js";
+
 const getSecurityAction = (threatLevel) => {
   switch (
     String(threatLevel).toUpperCase()
@@ -50,6 +52,12 @@ const getSecurityAction = (threatLevel) => {
   }
 };
 
+/*
+|--------------------------------------------------------------------------
+| CHAT WITH AI
+|--------------------------------------------------------------------------
+*/
+
 export const chatWithAI = async (
   req,
   res
@@ -73,11 +81,13 @@ export const chatWithAI = async (
       });
     }
 
+    const safePrompt = maskSensitiveData(prompt.trim());
+
     /*
-     * ========================================================
-     * STEP 1 — PROMPTSENTINEL SECURITY GATEWAY
-     * ========================================================
-     */
+    ========================================================
+    STEP 1 — PROMPTSENTINEL SECURITY GATEWAY
+    ========================================================
+    */
 
     const securityResult =
       await analyzePrompt(
@@ -102,10 +112,10 @@ export const chatWithAI = async (
       );
 
     /*
-     * ========================================================
-     * STEP 2 — BLOCK HIGH / CRITICAL
-     * ========================================================
-     */
+    ========================================================
+    STEP 2 — BLOCK HIGH / CRITICAL
+    ========================================================
+    */
 
     if (!securityAction.allowed) {
       return res.status(200).json({
@@ -158,23 +168,41 @@ export const chatWithAI = async (
     }
 
     /*
-     * ========================================================
-     * STEP 3 — ALLOWED PROMPT → AI PROVIDER
-     * ========================================================
-     */
+    ========================================================
+    STEP 3 — ALLOWED PROMPT → AI PROVIDER
+    ========================================================
+    */
 
     const aiResult =
       await generateAIResponse({
-        prompt: prompt.trim(),
-        conversation,
+        prompt: safePrompt,
+
+        conversation: Array.isArray(conversation)
+          ? conversation.map((message) => ({
+              ...message,
+              content: typeof message?.content === "string"
+                ? maskSensitiveData(message.content)
+                : message?.content,
+            }))
+          : conversation,
+
+        /*
+         * STEP 9A:
+         * Pass the selected provider to the AI service.
+         *
+         * Groq remains the only connected provider
+         * at this stage.
+         */
+        provider,
+
         responseStyle,
       });
 
     /*
-     * ========================================================
-     * STEP 4 — CREATE / VALIDATE CONVERSATION
-     * ========================================================
-     */
+    ========================================================
+    STEP 4 — CREATE / VALIDATE CONVERSATION
+    ========================================================
+    */
 
     let activeConversationId =
       conversationId || null;
@@ -192,6 +220,7 @@ export const chatWithAI = async (
             id: activeConversationId,
             userId: req.user.id,
           },
+
           select: {
             id: true,
           },
@@ -219,11 +248,9 @@ export const chatWithAI = async (
             userId: req.user.id,
 
             title:
-              prompt.trim().length > 60
-                ? `${prompt
-                    .trim()
-                    .slice(0, 57)}...`
-                : prompt.trim(),
+              safePrompt.length > 60
+                ? `${safePrompt.slice(0, 57)}...`
+                : safePrompt,
           },
 
           select: {
@@ -236,10 +263,10 @@ export const chatWithAI = async (
     }
 
     /*
-     * ========================================================
-     * STEP 5 — SAVE USER + ASSISTANT MESSAGES
-     * ========================================================
-     */
+    ========================================================
+    STEP 5 — SAVE USER + ASSISTANT MESSAGES
+    ========================================================
+    */
 
     await prisma.aIMessage.createMany({
       data: [
@@ -247,7 +274,7 @@ export const chatWithAI = async (
           role: "USER",
 
           content:
-            prompt.trim(),
+            safePrompt,
 
           provider:
             provider ||
@@ -286,10 +313,10 @@ export const chatWithAI = async (
     });
 
     /*
-     * ========================================================
-     * STEP 6 — RETURN SECURITY + AI + CONVERSATION ID
-     * ========================================================
-     */
+    ========================================================
+    STEP 6 — RETURN SECURITY + AI + CONVERSATION ID
+    ========================================================
+    */
 
     return res.status(200).json({
       success: true,
@@ -355,10 +382,10 @@ export const chatWithAI = async (
 };
 
 /*
- * ========================================================
- * STEP 7B — GET AI CONVERSATION HISTORY
- * ========================================================
- */
+========================================================
+STEP 7B — GET AI CONVERSATION HISTORY
+========================================================
+*/
 
 export const getAIConversations = async (
   req,

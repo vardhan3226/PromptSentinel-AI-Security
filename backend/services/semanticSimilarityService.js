@@ -1,5 +1,8 @@
 import attackPatterns from "./attackPatterns.js";
 
+// Require strong lexical similarity to reduce benign-question false positives.
+const SEMANTIC_DETECTION_THRESHOLD = 70;
+
 const synonymGroups = [
   ["ignore", "disregard", "forget", "override", "bypass", "skip"],
   [
@@ -268,7 +271,7 @@ export function analyzeSemanticSimilarity(prompt) {
         pattern
       );
 
-      if (similarityScore >= 40) {
+      if (similarityScore >= SEMANTIC_DETECTION_THRESHOLD) {
         matches.push({
           attackType: attack.attackType,
           pattern,
@@ -303,11 +306,11 @@ export function analyzeSemanticSimilarity(prompt) {
       : 0;
 
   return {
-    detected: similarityScore >= 40,
+    detected: similarityScore >= SEMANTIC_DETECTION_THRESHOLD,
     similarityScore,
     matches: topMatches,
     summary:
-      similarityScore >= 40
+      similarityScore >= SEMANTIC_DETECTION_THRESHOLD
         ? `Semantic similarity detected with ${topMatches[0].attackType} patterns`
         : "No semantic similarity detected",
   };

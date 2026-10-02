@@ -5,7 +5,6 @@ function StatCard({
   value,
   icon,
   color = "text-blue-600",
-  bgColor = "bg-white",
 }) {
   const getAccent = () => {
     if (color.includes("green")) {
@@ -81,7 +80,6 @@ function StatCard({
         hover:shadow-md
       "
     >
-
       {/* TOP ACCENT */}
 
       <div
@@ -91,7 +89,6 @@ function StatCard({
       {/* HEADER */}
 
       <div className="flex items-start justify-between gap-4">
-
         <div
           className={`
             flex
@@ -122,13 +119,11 @@ function StatCard({
         >
           {accent.label}
         </span>
-
       </div>
 
       {/* VALUE */}
 
       <div className="mt-5">
-
         <p className="text-sm font-medium text-slate-500">
           {title}
         </p>
@@ -144,15 +139,12 @@ function StatCard({
         >
           {value}
         </h2>
-
       </div>
 
       {/* PROGRESS */}
 
       <div className="mt-5">
-
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-
           <motion.div
             initial={{
               width: 0,
@@ -166,9 +158,7 @@ function StatCard({
             }}
             className={`h-full rounded-full ${accent.bar}`}
           />
-
         </div>
-
       </div>
 
       {/* SUBTLE DECORATION */}
@@ -187,7 +177,6 @@ function StatCard({
           blur-2xl
         `}
       />
-
     </motion.div>
   );
 }

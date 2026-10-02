@@ -1,19 +1,36 @@
+
 import benchmarkDataset from "./benchmarkDataset.js";
 import { detectAttack } from "./detectionEngine.js";
 import { analyzeSemanticSimilarity } from "./semanticSimilarityService.js";
 
+// Check whether the local engine detected a threat.
+function isLocalDetected(result) {
+  return Boolean(
+    result?.threatLevel &&
+      result.threatLevel !== "SAFE"
+  );
+}
+
+// Check whether the semantic engine detected a threat.
+function isSemanticDetected(result) {
+  return result?.detected === true;
+}
+
+// Classify a prompt using both detection engines.
 function classifyPrompt(prompt) {
   const localResult = detectAttack(prompt);
-  const semanticResult = analyzeSemanticSimilarity(prompt);
+  const semanticResult =
+    analyzeSemanticSimilarity(prompt);
 
   return (
-    localResult.detected === true ||
-    semanticResult.detected === true
+    isLocalDetected(localResult) ||
+    isSemanticDetected(semanticResult)
   )
     ? "MALICIOUS"
     : "SAFE";
 }
 
+// Calculate metrics for one category.
 function calculateCategoryMetrics(category) {
   const categoryCases = benchmarkDataset.filter(
     (testCase) => testCase.category === category
@@ -52,6 +69,7 @@ function calculateCategoryMetrics(category) {
   };
 }
 
+// Run the category benchmark.
 function runCategoryBenchmark() {
   const categories = [
     "SAFE",
@@ -69,6 +87,7 @@ function runCategoryBenchmark() {
   );
 }
 
+// Print the category benchmark report.
 const results = runCategoryBenchmark();
 
 console.log("");
@@ -78,9 +97,7 @@ console.log("DAY 3 CATEGORY METRICS");
 console.log("=================================");
 
 console.log("");
-console.log(
-  "CATEGORY PERFORMANCE"
-);
+console.log("CATEGORY PERFORMANCE");
 console.log("---------------------------------");
 
 for (const result of results) {

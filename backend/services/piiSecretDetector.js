@@ -33,7 +33,7 @@ function detectPII(prompt, findings) {
   }
 
   const phonePattern =
-    /(?<!\d)(?:\+?\d{1,3}[\s.-]?)?(?:\d{3}[\s.-]?\d{3}[\s.-]?\d{4}|\d{10})(?!\d)/g;
+    /(?<![A-Za-z0-9])(?:\+?91[\s.-]?)?[6-9]\d{4}[\s.-]?\d{5}(?![A-Za-z0-9])|(?<![A-Za-z0-9])(?:\+?\d{1,3}[\s.-]?)?(?:\d{3}[\s.-]?\d{3}[\s.-]?\d{4}|\d{10})(?![A-Za-z0-9])/g;
 
   if (phonePattern.test(prompt)) {
     addFinding(findings, "PHONE_NUMBER", "PII");
@@ -222,7 +222,7 @@ export function maskSensitiveData(prompt) {
   );
 
   masked = masked.replace(
-    /(?<!\d)(?:\+?\d{1,3}[\s.-]?)?(?:\d{3}[\s.-]?\d{3}[\s.-]?\d{4}|\d{10})(?!\d)/g,
+    /(?<![A-Za-z0-9])(?:\+?91[\s.-]?)?[6-9]\d{4}[\s.-]?\d{5}(?![A-Za-z0-9])|(?<![A-Za-z0-9])(?:\+?\d{1,3}[\s.-]?)?(?:\d{3}[\s.-]?\d{3}[\s.-]?\d{4}|\d{10})(?![A-Za-z0-9])/g,
     "[REDACTED_PHONE]"
   );
 

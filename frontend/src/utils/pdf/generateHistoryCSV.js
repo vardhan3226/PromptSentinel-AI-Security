@@ -1,7 +1,5 @@
 function maskSensitivePrompt(prompt) {
-  if (typeof prompt !== "string") {
-    return "";
-  }
+  if (typeof prompt !== "string") return "";
 
   let masked = prompt;
 
@@ -16,7 +14,7 @@ function maskSensitivePrompt(prompt) {
   );
 
   masked = masked.replace(
-    /\b(?:api[_-]?key|apikey|api[_-]?token)\s*[:=]\s*["']?[A-Za-z0-9_\-]{16,}["']?/gi,
+    /\b(?:api[_-]?key|apikey|api[_-]?token)\s*[:=]\s*["']?[A-Za-z0-9_-]{16,}["']?/gi,
     "[REDACTED_API_KEY]"
   );
 
@@ -65,7 +63,6 @@ function maskSensitivePrompt(prompt) {
 
 function escapeCSV(value) {
   const text = String(value ?? "");
-
   return `"${text.replace(/"/g, '""')}"`;
 }
 
@@ -90,20 +87,14 @@ export const generateHistoryCSV = (history = []) => {
 
   const csv = [
     headers.map(escapeCSV).join(","),
-    ...rows.map((row) =>
-      row.map(escapeCSV).join(",")
-    ),
+    ...rows.map((row) => row.map(escapeCSV).join(",")),
   ].join("\n");
 
-  const blob = new Blob(
-    [csv],
-    {
-      type: "text/csv;charset=utf-8;",
-    }
-  );
+  const blob = new Blob([csv], {
+    type: "text/csv;charset=utf-8;",
+  });
 
   const url = URL.createObjectURL(blob);
-
   const link = document.createElement("a");
 
   link.href = url;

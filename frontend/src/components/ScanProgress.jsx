@@ -64,20 +64,15 @@ function ScanProgress() {
     return () => clearInterval(timer);
   }, []);
 
-  const progress =
-    ((step + 1) / steps.length) * 100;
+  const progress = ((step + 1) / steps.length) * 100;
 
   return (
     <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-
       {/* Header */}
 
       <div className="border-b border-slate-100 px-6 py-5 sm:px-8">
-
         <div className="flex items-center justify-between gap-4">
-
           <div className="flex items-center gap-3">
-
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50">
               <ShieldCheck
                 size={22}
@@ -94,27 +89,21 @@ function ScanProgress() {
                 Analyzing your prompt securely
               </p>
             </div>
-
           </div>
 
           <div className="hidden items-center gap-2 sm:flex">
-
             <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />
 
             <span className="text-xs font-semibold text-slate-500">
               Analysis in progress
             </span>
-
           </div>
-
         </div>
 
         {/* Progress */}
 
         <div className="mt-5">
-
           <div className="mb-2 flex items-center justify-between">
-
             <span className="text-xs font-medium text-slate-500">
               Security analysis
             </span>
@@ -122,34 +111,27 @@ function ScanProgress() {
             <span className="text-xs font-bold text-blue-600">
               {Math.round(progress)}%
             </span>
-
           </div>
 
           <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-
             <div
               className="h-full rounded-full bg-blue-600 transition-all duration-500"
               style={{
                 width: `${progress}%`,
               }}
             />
-
           </div>
-
         </div>
-
       </div>
 
       {/* Steps */}
 
       <div className="space-y-3 p-5 sm:p-7">
-
         {steps.map((item, index) => {
           const Icon = item.icon;
 
           const completed = index < step;
           const active = index === step;
-          const pending = index > step;
 
           return (
             <div
@@ -162,7 +144,6 @@ function ScanProgress() {
                   : "border-slate-100 bg-white opacity-50"
               }`}
             >
-
               {/* Icon */}
 
               <div
@@ -174,25 +155,17 @@ function ScanProgress() {
                     : "bg-slate-100 text-slate-400"
                 }`}
               >
-
                 <Icon
                   size={20}
                   strokeWidth={1.8}
-                  className={
-                    active
-                      ? "animate-pulse"
-                      : ""
-                  }
+                  className={active ? "animate-pulse" : ""}
                 />
-
               </div>
 
               {/* Content */}
 
               <div className="min-w-0 flex-1">
-
                 <div className="flex items-center justify-between gap-3">
-
                   <p
                     className={`text-sm font-semibold ${
                       active || completed
@@ -218,7 +191,6 @@ function ScanProgress() {
                       ? "Done"
                       : "Waiting"}
                   </span>
-
                 </div>
 
                 <p className="mt-1 text-xs leading-5 text-slate-500">
@@ -228,7 +200,6 @@ function ScanProgress() {
                 {/* Step progress */}
 
                 <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
-
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
                       active
@@ -244,21 +215,16 @@ function ScanProgress() {
                           : "0%",
                     }}
                   />
-
                 </div>
-
               </div>
-
             </div>
           );
         })}
-
       </div>
 
       {/* Footer status */}
 
       <div className="flex items-center gap-2 border-t border-slate-100 bg-slate-50 px-6 py-4 sm:px-8">
-
         <CheckCircle
           size={15}
           className={
@@ -273,9 +239,7 @@ function ScanProgress() {
             ? "PromptSentinel security analysis completed."
             : "PromptSentinel is securely analyzing the prompt."}
         </p>
-
       </div>
-
     </div>
   );
 }
