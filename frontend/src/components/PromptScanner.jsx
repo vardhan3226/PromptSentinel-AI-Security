@@ -10,6 +10,7 @@ import {
   XCircle,
   RefreshCw,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 
 function PromptScanner({
@@ -133,6 +134,19 @@ function PromptScanner({
 
   const isBusy =
     loading || redTeamLoading;
+
+  /* ============================================================
+     CLEAR PROMPT
+  ============================================================ */
+
+  const handleClearPrompt = () => {
+    if (isBusy) {
+      return;
+    }
+
+    setPrompt("");
+    setRobustnessResult(null);
+  };
 
   const totalMutations = Number(
     robustnessResult?.totalMutations || 0
@@ -300,6 +314,10 @@ function PromptScanner({
             "
           />
 
+          {/* ====================================================
+              INPUT FOOTER
+          ==================================================== */}
+
           <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/70 px-4 py-2.5">
 
             <span className="text-[11px] text-slate-400">
@@ -309,9 +327,44 @@ function PromptScanner({
                 : "words"}
             </span>
 
-            <span className="text-[11px] font-medium text-slate-400">
-              AI Security Analysis
-            </span>
+            <div className="flex items-center gap-3">
+
+              {/* CLEAR BUTTON */}
+
+              {prompt.trim() && (
+                <button
+                  type="button"
+                  onClick={handleClearPrompt}
+                  disabled={isBusy}
+                  className="
+                    inline-flex
+                    items-center
+                    gap-1.5
+                    rounded-lg
+                    px-2.5
+                    py-1.5
+                    text-[11px]
+                    font-semibold
+                    text-slate-500
+                    transition
+                    hover:bg-red-50
+                    hover:text-red-600
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
+                  "
+                  title="Clear prompt"
+                  aria-label="Clear prompt"
+                >
+                  <Trash2 size={13} />
+                  Clear
+                </button>
+              )}
+
+              <span className="text-[11px] font-medium text-slate-400">
+                AI Security Analysis
+              </span>
+
+            </div>
 
           </div>
 
@@ -516,6 +569,7 @@ function PromptScanner({
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
 
               <div className="rounded-xl border border-slate-200 bg-white p-3">
+
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                   Mutations
                 </p>
@@ -523,9 +577,11 @@ function PromptScanner({
                 <p className="mt-1 text-2xl font-extrabold text-slate-800">
                   {totalMutations}
                 </p>
+
               </div>
 
               <div className="rounded-xl border border-emerald-100 bg-white p-3">
+
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
                   Detected
                 </p>
@@ -533,9 +589,11 @@ function PromptScanner({
                 <p className="mt-1 text-2xl font-extrabold text-emerald-700">
                   {detectedMutations}
                 </p>
+
               </div>
 
               <div className="rounded-xl border border-red-100 bg-white p-3">
+
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-red-600">
                   Missed
                 </p>
@@ -543,9 +601,11 @@ function PromptScanner({
                 <p className="mt-1 text-2xl font-extrabold text-red-700">
                   {missedMutations}
                 </p>
+
               </div>
 
               <div className="rounded-xl border border-blue-100 bg-white p-3">
+
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-600">
                   Detection Rate
                 </p>
@@ -553,6 +613,7 @@ function PromptScanner({
                 <p className="mt-1 text-2xl font-extrabold text-blue-700">
                   {detectionRate}%
                 </p>
+
               </div>
 
             </div>
@@ -611,6 +672,7 @@ function PromptScanner({
                                 }
                               `}
                             >
+
                               {detected ? (
                                 <CheckCircle2
                                   size={15}
@@ -620,6 +682,7 @@ function PromptScanner({
                                   size={15}
                                 />
                               )}
+
                             </div>
 
                             <div className="min-w-0 flex-1">

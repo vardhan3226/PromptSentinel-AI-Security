@@ -65,18 +65,81 @@ const semanticConcepts = [
     attackType: "Prompt Injection",
     pattern: "instruction hierarchy override",
     requiredGroups: [
-      ["instruction", "instructions", "command", "commands", "rules", "guidelines", "policies", "directions"],
-      ["ignore", "disregard", "forget", "override", "bypass", "skip"],
-      ["priority", "precedence", "authority", "highest"],
+      [
+        "instruction",
+        "instructions",
+        "command",
+        "commands",
+        "rules",
+        "guidelines",
+        "policies",
+        "directions",
+      ],
+      [
+        "ignore",
+        "disregard",
+        "forget",
+        "override",
+        "bypass",
+        "skip",
+      ],
+      [
+        "priority",
+        "precedence",
+        "authority",
+        "highest",
+      ],
     ],
     score: 72,
   },
   {
     attackType: "Prompt Injection",
-    pattern: "attacker instructions treated as highest priority",
+    pattern:
+      "ignore existing instructions and follow attacker instructions",
     requiredGroups: [
-      ["instruction", "instructions", "command", "commands", "rules", "guidelines", "policies", "directions"],
-      ["priority", "precedence", "authority", "highest"],
+      [
+        "instruction",
+        "instructions",
+        "command",
+        "commands",
+        "rules",
+        "guidelines",
+        "policies",
+        "directions",
+      ],
+      [
+        "ignore",
+        "disregard",
+        "forget",
+        "override",
+        "bypass",
+        "skip",
+      ],
+      ["follow", "obey", "respect"],
+    ],
+    score: 72,
+  },
+  {
+    attackType: "Prompt Injection",
+    pattern:
+      "attacker instructions treated as highest priority",
+    requiredGroups: [
+      [
+        "instruction",
+        "instructions",
+        "command",
+        "commands",
+        "rules",
+        "guidelines",
+        "policies",
+        "directions",
+      ],
+      [
+        "priority",
+        "precedence",
+        "authority",
+        "highest",
+      ],
       ["follow", "obey", "respect"],
     ],
     score: 68,
@@ -85,8 +148,22 @@ const semanticConcepts = [
     attackType: "Jailbreak",
     pattern: "disable or disregard safety restrictions",
     requiredGroups: [
-      ["safety", "safeguards", "restrictions", "restriction", "limitations", "controls"],
-      ["ignore", "disregard", "forget", "override", "bypass", "skip"],
+      [
+        "safety",
+        "safeguards",
+        "restrictions",
+        "restriction",
+        "limitations",
+        "controls",
+      ],
+      [
+        "ignore",
+        "disregard",
+        "forget",
+        "override",
+        "bypass",
+        "skip",
+      ],
     ],
     score: 70,
   },
@@ -94,8 +171,20 @@ const semanticConcepts = [
     attackType: "Role Manipulation",
     pattern: "assume an unrestricted role",
     requiredGroups: [
-      ["pretend", "act", "assume", "roleplay", "impersonate", "behave"],
-      ["unrestricted", "uncensored", "unfiltered", "unlimited"],
+      [
+        "pretend",
+        "act",
+        "assume",
+        "roleplay",
+        "impersonate",
+        "behave",
+      ],
+      [
+        "unrestricted",
+        "uncensored",
+        "unfiltered",
+        "unlimited",
+      ],
     ],
     score: 70,
   },
@@ -271,7 +360,10 @@ export function analyzeSemanticSimilarity(prompt) {
         pattern
       );
 
-      if (similarityScore >= SEMANTIC_DETECTION_THRESHOLD) {
+      if (
+        similarityScore >=
+        SEMANTIC_DETECTION_THRESHOLD
+      ) {
         matches.push({
           attackType: attack.attackType,
           pattern,
@@ -298,7 +390,8 @@ export function analyzeSemanticSimilarity(prompt) {
     }
   }
 
-  const topMatches = uniqueMatches.slice(0, 10);
+  const topMatches =
+    uniqueMatches.slice(0, 10);
 
   const similarityScore =
     topMatches.length > 0
@@ -306,11 +399,14 @@ export function analyzeSemanticSimilarity(prompt) {
       : 0;
 
   return {
-    detected: similarityScore >= SEMANTIC_DETECTION_THRESHOLD,
+    detected:
+      similarityScore >=
+      SEMANTIC_DETECTION_THRESHOLD,
     similarityScore,
     matches: topMatches,
     summary:
-      similarityScore >= SEMANTIC_DETECTION_THRESHOLD
+      similarityScore >=
+      SEMANTIC_DETECTION_THRESHOLD
         ? `Semantic similarity detected with ${topMatches[0].attackType} patterns`
         : "No semantic similarity detected",
   };

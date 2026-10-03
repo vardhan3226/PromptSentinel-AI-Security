@@ -7,8 +7,17 @@ import {
   EyeOff,
   ArrowRight,
   ShieldCheck,
+  Home,
 } from "lucide-react";
+import {
+  reload,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
+
 import API_BASE_URL from "../config/api";
+import { auth } from "../config/firebase";
+import loginIndia from "../assets/images/india/login-india.png";
 
 function LoginForm() {
   const navigate = useNavigate();
@@ -23,7 +32,9 @@ function LoginForm() {
     e.preventDefault();
     setError("");
 
-    if (!email || !password) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || !password) {
       setError("Please enter your email and password.");
       return;
     }
@@ -31,6 +42,45 @@ function LoginForm() {
     try {
       setLoading(true);
 
+      /*
+       * 1. Authenticate with Firebase
+       */
+      const credential = await signInWithEmailAndPassword(
+        auth,
+        normalizedEmail,
+        password
+      );
+
+      const firebaseUser = credential.user;
+
+      /*
+       * 2. Refresh Firebase user information so that
+       *    emailVerified is current.
+       */
+      await reload(firebaseUser);
+
+      /*
+       * 3. Do not allow unverified Firebase users
+       *    to continue into PromptSentinel.
+       */
+      if (!firebaseUser.emailVerified) {
+        await signOut(auth);
+
+        throw new Error(
+          "Please verify your email address before logging in."
+        );
+      }
+
+      /*
+       * 4. Get a fresh Firebase ID token.
+       */
+      const idToken = await firebaseUser.getIdToken(true);
+
+      /*
+       * 5. Send the Firebase token to the PromptSentinel
+       *    backend. The backend verifies the token with
+       *    Firebase Admin and maps it to the Prisma user.
+       */
       const response = await fetch(
         `${API_BASE_URL}/api/auth/login`,
         {
@@ -39,8 +89,9 @@ function LoginForm() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            email,
+            email: normalizedEmail,
             password,
+            idToken,
           }),
         }
       );
@@ -48,14 +99,54 @@ function LoginForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Login failed.");
+        throw new Error(
+          data.message || "Login failed."
+        );
       }
 
+      /*
+       * The backend returns the Firebase ID token.
+       * Existing protected API requests continue using
+       * localStorage("token").
+       */
       localStorage.setItem("token", data.token);
 
       navigate("/dashboard");
     } catch (err) {
-      setError(err.message || "Unable to login.");
+      let message;
+
+      switch (err?.code) {
+        case "auth/invalid-credential":
+        case "auth/user-not-found":
+        case "auth/wrong-password":
+          message = "Invalid email or password.";
+          break;
+
+        case "auth/invalid-email":
+          message = "Please enter a valid email address.";
+          break;
+
+        case "auth/user-disabled":
+          message =
+            "This account has been disabled. Please contact support.";
+          break;
+
+        case "auth/too-many-requests":
+          message =
+            "Too many login attempts. Please try again later.";
+          break;
+
+        case "auth/network-request-failed":
+          message =
+            "Network error. Please check your internet connection and try again.";
+          break;
+
+        default:
+          message =
+            err?.message || "Unable to login.";
+      }
+
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -70,32 +161,45 @@ function LoginForm() {
           <section className="relative flex min-h-[680px] flex-col bg-white px-7 py-7 sm:px-10 lg:px-12">
             {/* HEADER */}
             <div className="flex items-start justify-between">
-              {/* LOGO */}
-              <Link
-                to="/home"
-                className="flex items-center gap-2.5"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
-                  <ShieldCheck
-                    size={22}
-                    strokeWidth={2}
-                    className="text-blue-600"
-                  />
-                </div>
+              <div className="flex items-center gap-3">
+                {/* HOME BUTTON */}
+                <button
+                  type="button"
+                  onClick={() => navigate("/home")}
+                  aria-label="Go to Home"
+                  title="Home"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <Home size={18} strokeWidth={2} />
+                </button>
 
-                <div>
-                  <div className="text-[16px] font-black tracking-tight text-[#10254d]">
-                    Prompt
-                    <span className="text-blue-600">
-                      Sentinel
-                    </span>
+                {/* LOGO */}
+                <Link
+                  to="/home"
+                  className="flex items-center gap-2.5"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
+                    <ShieldCheck
+                      size={22}
+                      strokeWidth={2}
+                      className="text-blue-600"
+                    />
                   </div>
 
-                  <div className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    AI SECURITY PLATFORM
+                  <div>
+                    <div className="text-[16px] font-black tracking-tight text-[#10254d]">
+                      Prompt
+                      <span className="text-blue-600">
+                        Sentinel
+                      </span>
+                    </div>
+
+                    <div className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      AI SECURITY PLATFORM
+                    </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </div>
 
               {/* MADE IN INDIA */}
               <div className="hidden text-right sm:block">
@@ -261,7 +365,7 @@ function LoginForm() {
             <div className="absolute right-[-120px] top-[70px] h-[220px] w-[520px] rotate-[-16deg] rounded-[50%] border-[35px] border-green-200/25" />
 
             {/* QUOTE CARD */}
-            <div className="absolute left-9 right-9 top-[72px] z-20 rounded-[25px] border border-white/80 bg-white/85 p-7 shadow-[0_12px_35px_rgba(15,53,72,0.07)] backdrop-blur-sm">
+            <div className="absolute left-9 right-9 top-[72px] z-20 rounded-[25px] border border-white/60 bg-white/25 p-7 shadow-[0_12px_35px_rgba(15,53,72,0.05)] backdrop-blur-[2px]">
               <h2 className="max-w-[300px] text-[25px] font-black leading-[1.08] tracking-tight text-[#10254d]">
                 “Safe AI
                 <br />
@@ -284,72 +388,26 @@ function LoginForm() {
               </div>
             </div>
 
-            {/* INDIA GATE */}
-            <div className="absolute bottom-[55px] left-1/2 z-10 h-[300px] w-[330px] -translate-x-1/2">
-              {/* GROUND GLOW */}
-              <div className="absolute bottom-0 left-1/2 h-20 w-72 -translate-x-1/2 rounded-full bg-green-300/30 blur-2xl" />
+            {/* INDIA VISUAL IMAGE */}
+            <div className="absolute inset-0 z-10">
+              <img
+                src={loginIndia}
+                alt="Taj Mahal representing Indian innovation and responsible AI"
+                className="h-full w-full object-cover"
+              />
 
-              {/* MONUMENT */}
-              <div className="absolute bottom-5 left-1/2 h-[225px] w-[195px] -translate-x-1/2">
-                {/* TOP */}
-                <div className="absolute left-4 right-4 top-0 h-8 rounded-t-md bg-[#d5b57b]" />
-
-                {/* MAIN BODY */}
-                <div className="absolute bottom-0 left-7 right-7 top-7 bg-gradient-to-b from-[#e3c995] to-[#c09251]">
-                  {/* ARCH */}
-                  <div className="absolute bottom-0 left-1/2 h-[140px] w-[88px] -translate-x-1/2 rounded-t-[50px] bg-[#f5f9f6]" />
-
-                  {/* DECORATIVE LINES */}
-                  <div className="absolute left-1/2 top-[48px] h-2 w-24 -translate-x-1/2 rounded bg-[#ae8147]" />
-
-                  <div className="absolute left-1/2 top-[73px] h-1.5 w-14 -translate-x-1/2 rounded bg-[#ae8147]" />
-
-                  {/* CENTER DETAIL */}
-                  <div className="absolute left-1/2 top-[98px] h-1 w-10 -translate-x-1/2 rounded bg-[#ae8147]" />
-                </div>
-
-                {/* LEFT TOWER */}
-                <div className="absolute bottom-0 left-0 h-[190px] w-10 rounded-t-md bg-[#c69b60]" />
-
-                {/* RIGHT TOWER */}
-                <div className="absolute bottom-0 right-0 h-[190px] w-10 rounded-t-md bg-[#c69b60]" />
-
-                {/* TOWER CAPS */}
-                <div className="absolute left-[-2px] top-[-8px] h-5 w-11 rounded-full bg-[#b98c4e]" />
-
-                <div className="absolute right-[-2px] top-[-8px] h-5 w-11 rounded-full bg-[#b98c4e]" />
+              {/* RESPONSIBLE AI BACKDROP */}
+              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center overflow-hidden">
+                <span className="whitespace-nowrap text-[72px] font-black uppercase tracking-[0.18em] text-white/20 drop-shadow-[0_2px_18px_rgba(15,53,72,0.18)] sm:text-[88px]">
+                  RESPONSIBLE AI
+                </span>
               </div>
 
-              {/* WAVES */}
-              <svg
-                className="absolute -bottom-12 -left-[120px] h-[210px] w-[570px]"
-                viewBox="0 0 600 250"
-                preserveAspectRatio="none"
-              >
-                <path
-                  d="M-20 190 C120 100 190 220 315 160 C430 110 500 155 620 55"
-                  fill="none"
-                  stroke="#f97316"
-                  strokeWidth="20"
-                  opacity="0.27"
-                />
+              {/* Soft readability overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#eef9f1]/35 via-transparent to-white/10" />
 
-                <path
-                  d="M-20 215 C120 125 190 245 320 185 C435 135 505 180 620 80"
-                  fill="none"
-                  stroke="#ffffff"
-                  strokeWidth="23"
-                  opacity="0.98"
-                />
-
-                <path
-                  d="M-20 240 C120 150 195 270 325 210 C440 160 510 205 620 105"
-                  fill="none"
-                  stroke="#20a36a"
-                  strokeWidth="18"
-                  opacity="0.42"
-                />
-              </svg>
+              {/* Subtle cinematic glow */}
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/5 via-transparent to-green-400/10" />
             </div>
 
             {/* SMALL BIRDS */}

@@ -2,6 +2,8 @@ import crypto from "crypto";
 
 import {
   registerUser,
+  registerFirebaseUser,
+  loginFirebaseUser,
   loginUser,
   resendVerificationEmail,
 } from "../services/authService.js";
@@ -27,7 +29,12 @@ const hashToken = (token) => {
 
 export const register = async (req, res) => {
   try {
-    const { fullName, email, password } = req.body;
+    const {
+      fullName,
+      email,
+      password,
+      idToken,
+    } = req.body;
 
     const validation = validateRegister({
       fullName,
@@ -42,6 +49,35 @@ export const register = async (req, res) => {
       });
     }
 
+    /*
+     * Firebase registration path
+     *
+     * The frontend sends the Firebase ID token after
+     * creating the Firebase account.
+     *
+     * Firebase email verification may still be pending
+     * at this point. The login flow will enforce the
+     * Firebase email verification state.
+     */
+    if (idToken) {
+      const result = await registerFirebaseUser({
+        fullName,
+        email,
+        idToken,
+      });
+
+      return res.status(201).json({
+        success: true,
+        ...result,
+      });
+    }
+
+    /*
+     * Legacy registration path
+     *
+     * Kept temporarily during the Firebase migration so
+     * existing clients are not immediately broken.
+     */
     const result = await registerUser({
       fullName,
       email,
@@ -62,8 +98,36 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const {
+      email,
+      password,
+      idToken,
+    } = req.body;
 
+    /*
+     * Firebase login path
+     *
+     * The frontend authenticates the email/password
+     * directly with Firebase and sends the resulting
+     * Firebase ID token to the backend.
+     */
+    if (idToken) {
+      const result = await loginFirebaseUser({
+        idToken,
+      });
+
+      return res.status(200).json({
+        success: true,
+        ...result,
+      });
+    }
+
+    /*
+     * Legacy JWT login path
+     *
+     * Kept temporarily for existing accounts/clients
+     * during the Firebase migration.
+     */
     const validation = validateLogin({
       email,
       password,
@@ -100,7 +164,8 @@ export const verifyEmail = async (req, res) => {
     if (!token || !email) {
       return res.status(400).json({
         success: false,
-        message: "Verification token and email are required.",
+        message:
+          "Verification token and email are required.",
       });
     }
 
@@ -175,11 +240,15 @@ export const verifyEmail = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Email verification error:", error);
+    console.error(
+      "Email verification error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Unable to verify email at this time.",
+      message:
+        "Unable to verify email at this time.",
     });
   }
 };
@@ -234,7 +303,10 @@ export const forgotPassword = async (req, res) => {
       ...result,
     });
   } catch (error) {
-    console.error("Forgot password error:", error);
+    console.error(
+      "Forgot password error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -282,7 +354,10 @@ export const changePassword = async (req, res) => {
       ...result,
     });
   } catch (error) {
-    console.error("Password reset error:", error);
+    console.error(
+      "Password reset error:",
+      error
+    );
 
     return res.status(400).json({
       success: false,

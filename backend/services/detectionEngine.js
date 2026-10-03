@@ -86,11 +86,13 @@ function detectRoleManipulation(text) {
 
 function detectSensitiveInformation(text) {
   const patterns = [
-    /\b(?:reveal|show|display|print|provide|give|send|share|expose|extract|dump|retrieve|return|tell me|find|get|list)\b.{0,80}\b(api keys?|apikeys?|secret keys?|secret tokens?|passwords?|passwd|pwd|access tokens?|authentication tokens?|bearer tokens?|jwt secrets?|private keys?|ssh keys?|environment variables?|\.env file|database credentials?|database passwords?|connection strings?|credentials?|secrets?)\b/i,
-    /\b(?:api keys?|apikeys?|secret keys?|secret tokens?|passwords?|passwd|pwd|access tokens?|authentication tokens?|bearer tokens?|jwt secrets?|private keys?|ssh keys?|environment variables?|\.env file|database credentials?|database passwords?|connection strings?|credentials?|secrets?)\b.{0,80}\b(?:reveal|show|display|print|provide|give|send|share|expose|extract|dump|retrieve|return|tell me|find|get|list|read|access|steal|obtain|collect)\b/i,
-    /\b(?:what is|what's|where is|where are|tell me|give me)\b.{0,60}\b(?:passwords?|api keys?|apikeys?|secret|secrets|tokens?|credentials?|private keys?|connection strings?)\b/i,
-    /\b(?:read|access|retrieve|extract|dump|steal|obtain|collect|reveal|show)\b.{0,60}\b(?:passwords?|api keys?|apikeys?|secret|secrets|tokens?|credentials?|private keys?|connection strings?)\b/i,
-    /\b(?:reveal|show|display|print|provide|give|send|share|expose|retrieve|get|extract)\b.{0,80}\b(?:private|confidential|hidden)\b.{0,40}\b(?:api keys?|passwords?|tokens?|credentials?|secrets?|private keys?)\b/i,
+    /\b(?:reveal|show|display|print|provide|give|send|share|expose|extract|dump|retrieve|return|tell me|find|get|list)\b.{0,80}\b(api key|apikey|secret key|secret token|password|passwd|pwd|access token|authentication token|bearer token|jwt secret|private key|ssh key|environment variables|\.env file|database credentials|database password|connection string|credentials|secrets)\b/i,
+
+    /\b(api key|apikey|secret key|secret token|password|passwd|pwd|access token|authentication token|bearer token|jwt secret|private key|ssh key|environment variables|\.env file|database credentials|database password|connection string|credentials|secrets)\b.{0,80}\b(?:reveal|show|display|print|provide|give|send|share|expose|extract|dump|retrieve|return|tell me|find|get|list)\b/i,
+
+    /\b(?:what is|what's|where is|where are|tell me|give me)\b.{0,60}\b(?:password|api key|secret|token|credential|private key|connection string)\b/i,
+
+    /\b(?:read|access|retrieve|extract|dump|steal|obtain|collect)\b.{0,60}\b(?:password|api key|secret|token|credential|private key|connection string)\b/i,
   ];
 
   return patterns.filter((pattern) => pattern.test(text));
@@ -140,12 +142,9 @@ function isPassiveSensitivePattern(pattern, text) {
 
 function detectDataExfiltration(text) {
   const patterns = [
-    /\b(?:dump|export|download|extract|copy|send|upload)\b.{0,80}\b(?:database|records|confidential data|sensitive data|private data|user records|confidential records)\b/i,
-    /\b(?:exfiltrate|steal)\b.{0,60}\b(?:data|information|records|database|user records|confidential data)\b/i,
-    /\bsend\b.{0,80}\b(?:all|entire|confidential|private|sensitive)\b.{0,50}\b(?:database|records|data|information|user records)\b/i,
-    /\b(?:retrieve|extract|collect|obtain|access|dump|copy)\b.{0,60}\b(?:confidential|private|sensitive)\b.{0,50}\b(?:data|records|information|user records)\b.{0,60}\b(?:send|upload|export|transmit|forward)\b.{0,60}\b(?:external|outside|remote|third[- ]party|destination|server|endpoint)\b/i,
-    /\b(?:send|upload|export|transmit|forward)\b.{0,60}\b(?:confidential|private|sensitive|user)\b.{0,50}\b(?:data|records|information)\b.{0,60}\b(?:external|outside|remote|third[- ]party|destination|server|endpoint)\b/i,
-    /\b(?:retrieve|extract|collect|obtain|access)\b.{0,60}\b(?:user records|confidential records|private data|sensitive data)\b.{0,80}\b(?:send|upload|export|transmit|forward)\b/i,
+    /\b(dump|export|download|extract|copy|send|upload)\b.{0,80}\b(database|records|confidential data|sensitive data|private data)\b/i,
+    /\b(exfiltrate|steal)\b.{0,60}\b(data|information|records)\b/i,
+    /\bsend\b.{0,80}\b(all|entire)\b.{0,50}\b(database|records|data)\b/i,
   ];
 
   return patterns.filter((pattern) => pattern.test(text));
@@ -154,16 +153,13 @@ function detectDataExfiltration(text) {
 function detectCodeExecution(text) {
   const patterns = [
     /\brm\s+-rf\b/i,
-    /\bsudo\b.{0,50}\b(?:rm|shutdown|chmod|chown|kill|systemctl)\b/i,
+    /\bsudo\b.{0,50}\b(rm|shutdown|chmod)\b/i,
     /\bformat\s+c:/i,
     /\bdel\s+\/f\b/i,
-    /\bpowershell\b.{0,50}\b(?:-command|-enc|-encodedcommand)\b/i,
+    /\bpowershell\b.{0,50}\b(-command|-enc|-encodedcommand)\b/i,
     /\bcmd\.exe\b.{0,30}\b\/c\b/i,
-    /\bexecute\s+(?:arbitrary|remote|shell|system|command)\s+(?:code|commands?|instructions?)\b/i,
-    /\brun\s+(?:arbitrary|malicious|shell|system)\s+(?:code|commands?|instructions?)\b/i,
-    /\b(?:execute|run)\b.{0,40}\b(?:shell command|system command|terminal command|command line)\b/i,
-    /\b(?:execute|run)\b.{0,60}\b(?:this|the|a)\b.{0,30}\b(?:shell|terminal|system)\s+command\b/i,
-    /\b(?:execute|run)\b.{0,80}\b(?:command|code)\b.{0,50}\b(?:without|before)\b.{0,50}\b(?:checking|verifying|validating|confirming)\b.{0,50}\b(?:safe|safety|secure)\b/i,
+    /\bexecute\s+(arbitrary|remote)\s+code\b/i,
+    /\brun\s+(arbitrary|malicious)\s+code\b/i,
   ];
 
   return patterns.filter((pattern) => pattern.test(text));
@@ -229,16 +225,6 @@ function detectObfuscation(
   ) {
     indicators.push(
       "possible hexadecimal encoded content"
-    );
-  }
-
-  if (
-    normalizedText !==
-      originalText.toLowerCase().trim() &&
-    originalText.length > 20
-  ) {
-    indicators.push(
-      "text normalization detected"
     );
   }
 

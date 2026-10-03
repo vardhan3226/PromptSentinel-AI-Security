@@ -8,8 +8,18 @@ import {
   EyeOff,
   ArrowRight,
   ShieldCheck,
+  Home,
 } from "lucide-react";
+
+import {
+  createUserWithEmailAndPassword,
+  deleteUser,
+  sendEmailVerification,
+} from "firebase/auth";
+
+import { auth } from "../config/firebase";
 import API_BASE_URL from "../config/api";
+import registerIndia from "../assets/images/india/register-india.png";
 
 function RegisterForm() {
   const navigate = useNavigate();
@@ -21,7 +31,9 @@ function RegisterForm() {
     confirmPassword: "",
   });
 
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] =
+    useState(false);
+
   const [showConfirmPassword, setShowConfirmPassword] =
     useState(false);
 
@@ -51,14 +63,66 @@ function RegisterForm() {
       return;
     }
 
+    if (formData.fullName.trim().length < 3) {
+      setError(
+        "Full name must be at least 3 characters."
+      );
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      setError(
+        "Password must be at least 8 characters."
+      );
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
 
+    let firebaseUser = null;
+    let backendRegistrationCompleted = false;
+
     try {
       setLoading(true);
 
+      const email = formData.email
+        .trim()
+        .toLowerCase();
+
+      /*
+       * 1. Create the authentication account in Firebase.
+       */
+      const userCredential =
+        await createUserWithEmailAndPassword(
+          auth,
+          email,
+          formData.password
+        );
+
+      firebaseUser = userCredential.user;
+
+      /*
+       * 2. Send Firebase's email verification message.
+       */
+      await sendEmailVerification(firebaseUser);
+
+      /*
+       * 3. Get the Firebase ID token.
+       *
+       * The account is intentionally still unverified
+       * at this point. The backend stores the Prisma
+       * account as emailVerified = false.
+       */
+      const idToken =
+        await firebaseUser.getIdToken();
+
+      /*
+       * 4. Create the corresponding PromptSentinel
+       *    database user.
+       */
       const response = await fetch(
         `${API_BASE_URL}/api/auth/register`,
         {
@@ -67,9 +131,10 @@ function RegisterForm() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            fullName: formData.fullName,
-            email: formData.email,
+            fullName: formData.fullName.trim(),
+            email,
             password: formData.password,
+            idToken,
           }),
         }
       );
@@ -82,11 +147,78 @@ function RegisterForm() {
         );
       }
 
+      backendRegistrationCompleted = true;
+
+      /*
+       * Registration is complete.
+       *
+       * Firebase has already sent the verification
+       * email. The user must verify the email before
+       * logging in.
+       */
       navigate("/login");
     } catch (err) {
-      setError(
-        err.message || "Unable to create your account."
+      console.error(
+        "Firebase registration error:",
+        err
       );
+
+      /*
+       * If Firebase registration succeeded but the
+       * complete registration flow failed before the
+       * backend confirmed success, clean up the newly
+       * created Firebase account.
+       *
+       * The backend also performs cleanup if its Prisma
+       * user creation fails.
+       */
+      if (
+        firebaseUser &&
+        !backendRegistrationCompleted
+      ) {
+        try {
+          await deleteUser(firebaseUser);
+        } catch (cleanupError) {
+          /*
+           * The backend may already have deleted the
+           * Firebase account after a Prisma failure.
+           *
+           * Cleanup failure should not replace the
+           * original registration error shown to the user.
+           */
+          console.error(
+            "Firebase registration cleanup error:",
+            cleanupError
+          );
+        }
+      }
+
+      const message = (() => {
+        switch (err?.code) {
+          case "auth/email-already-in-use":
+            return "This email address is already registered.";
+
+          case "auth/invalid-email":
+            return "Please enter a valid email address.";
+
+          case "auth/weak-password":
+            return "Password must be at least 8 characters.";
+
+          case "auth/operation-not-allowed":
+            return "Email and password registration is currently unavailable.";
+
+          case "auth/network-request-failed":
+            return "Network error. Please check your internet connection and try again.";
+
+          default:
+            return (
+              err?.message ||
+              "Unable to create your account."
+            );
+        }
+      })();
+
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -101,31 +233,47 @@ function RegisterForm() {
           <section className="relative flex min-h-[680px] flex-col bg-white px-7 py-7 sm:px-10 lg:px-12">
             {/* HEADER */}
             <div className="flex items-start justify-between">
-              <Link
-                to="/home"
-                className="flex items-center gap-2.5"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
-                  <ShieldCheck
-                    size={22}
+              <div className="flex items-center gap-3">
+                <Link
+                  to="/home"
+                  className="flex items-center gap-2.5"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
+                    <ShieldCheck
+                      size={22}
+                      strokeWidth={2}
+                      className="text-blue-600"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="text-[16px] font-black tracking-tight text-[#10254d]">
+                      Prompt
+                      <span className="text-blue-600">
+                        Sentinel
+                      </span>
+                    </div>
+
+                    <div className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      AI SECURITY PLATFORM
+                    </div>
+                  </div>
+                </Link>
+
+                {/* HOME BUTTON */}
+                <button
+                  type="button"
+                  onClick={() => navigate("/home")}
+                  aria-label="Go to Home"
+                  title="Home"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <Home
+                    size={17}
                     strokeWidth={2}
-                    className="text-blue-600"
                   />
-                </div>
-
-                <div>
-                  <div className="text-[16px] font-black tracking-tight text-[#10254d]">
-                    Prompt
-                    <span className="text-blue-600">
-                      Sentinel
-                    </span>
-                  </div>
-
-                  <div className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    AI SECURITY PLATFORM
-                  </div>
-                </div>
-              </Link>
+                </button>
+              </div>
 
               {/* MADE IN INDIA */}
               <div className="hidden text-right sm:block">
@@ -231,7 +379,11 @@ function RegisterForm() {
                     />
 
                     <input
-                      type={showPassword ? "text" : "password"}
+                      type={
+                        showPassword
+                          ? "text"
+                          : "password"
+                      }
                       name="password"
                       value={formData.password}
                       onChange={handleChange}
@@ -243,7 +395,9 @@ function RegisterForm() {
                     <button
                       type="button"
                       onClick={() =>
-                        setShowPassword((value) => !value)
+                        setShowPassword(
+                          (value) => !value
+                        )
                       }
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
                     >
@@ -271,7 +425,9 @@ function RegisterForm() {
 
                     <input
                       type={
-                        showConfirmPassword ? "text" : "password"
+                        showConfirmPassword
+                          ? "text"
+                          : "password"
                       }
                       name="confirmPassword"
                       value={formData.confirmPassword}
@@ -284,7 +440,9 @@ function RegisterForm() {
                     <button
                       type="button"
                       onClick={() =>
-                        setShowConfirmPassword((value) => !value)
+                        setShowConfirmPassword(
+                          (value) => !value
+                        )
                       }
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
                     >
@@ -349,91 +507,11 @@ function RegisterForm() {
 
           {/* RIGHT — INDIA VISUAL */}
           <section className="relative hidden min-h-[680px] overflow-hidden bg-[#f5fbfc] lg:block">
-            {/* BACKGROUND */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#eaf8fc] via-white to-[#eef9f1]" />
-
-            <div className="absolute -right-24 -top-24 h-[380px] w-[380px] rounded-full bg-green-200/30 blur-3xl" />
-
-            <div className="absolute -bottom-32 -left-24 h-[360px] w-[360px] rounded-full bg-orange-200/25 blur-3xl" />
-
-            {/* SOFT CURVE */}
-            <div className="absolute -right-32 top-20 h-[230px] w-[560px] rotate-[-16deg] rounded-[50%] border-[35px] border-green-200/25" />
-
-            {/* MESSAGE */}
-            <div className="absolute left-9 right-9 top-[72px] z-20 rounded-[25px] border border-white/80 bg-white/85 p-7 shadow-[0_12px_35px_rgba(15,53,72,0.07)] backdrop-blur-sm">
-              <h2 className="text-[24px] font-black leading-[1.08] tracking-tight text-[#10254d]">
-                Empowering
-                <br />
-                Responsible AI
-                <br />
-                for a Better India
-              </h2>
-
-              <div className="mt-5 flex">
-                <span className="h-1.5 w-8 rounded-l-full bg-orange-500" />
-                <span className="h-1.5 w-8 bg-slate-100" />
-                <span className="h-1.5 w-8 rounded-r-full bg-green-600" />
-              </div>
-            </div>
-
-            {/* BUILDING */}
-            <div className="absolute bottom-[55px] left-1/2 z-10 h-[310px] w-[350px] -translate-x-1/2">
-              {/* GROUND */}
-              <div className="absolute bottom-0 left-1/2 h-20 w-72 -translate-x-1/2 rounded-full bg-green-300/30 blur-2xl" />
-
-              {/* BUILDING */}
-              <div className="absolute bottom-5 left-1/2 h-[165px] w-[245px] -translate-x-1/2 rounded-t-[50%] border-[10px] border-[#d2b47b] bg-[#ead7ac]">
-                {/* DOME */}
-                <div className="absolute left-1/2 top-[-66px] h-[85px] w-[135px] -translate-x-1/2 rounded-t-full bg-[#d7b77b]" />
-
-                <div className="absolute left-1/2 top-[-76px] h-4 w-4 -translate-x-1/2 rounded-full bg-[#b48a4e]" />
-
-                {/* DOME BASE */}
-                <div className="absolute left-1/2 top-[-4px] h-4 w-[160px] -translate-x-1/2 rounded-full bg-[#c69d61]" />
-
-                {/* PILLARS */}
-                <div className="absolute bottom-0 left-7 right-7 flex justify-between">
-                  <span className="h-[118px] w-5 rounded-t-full bg-[#d1ae6f]" />
-                  <span className="h-[118px] w-5 rounded-t-full bg-[#d1ae6f]" />
-                  <span className="h-[118px] w-5 rounded-t-full bg-[#d1ae6f]" />
-                  <span className="h-[118px] w-5 rounded-t-full bg-[#d1ae6f]" />
-                  <span className="h-[118px] w-5 rounded-t-full bg-[#d1ae6f]" />
-                </div>
-
-                {/* ENTRANCE */}
-                <div className="absolute bottom-0 left-1/2 h-[82px] w-[82px] -translate-x-1/2 rounded-t-full bg-[#f5f8f5]" />
-              </div>
-
-              {/* WAVES */}
-              <svg
-                className="absolute -bottom-10 -left-[125px] h-[220px] w-[600px]"
-                viewBox="0 0 600 250"
-                preserveAspectRatio="none"
-              >
-                <path
-                  d="M-20 190 C120 100 190 220 315 160 C430 110 500 155 620 55"
-                  fill="none"
-                  stroke="#f97316"
-                  strokeWidth="20"
-                  opacity="0.27"
-                />
-
-                <path
-                  d="M-20 215 C120 125 190 245 320 185 C435 135 505 180 620 80"
-                  fill="none"
-                  stroke="#ffffff"
-                  strokeWidth="23"
-                />
-
-                <path
-                  d="M-20 240 C120 150 195 270 325 210 C440 160 510 205 620 105"
-                  fill="none"
-                  stroke="#20a36a"
-                  strokeWidth="18"
-                  opacity="0.42"
-                />
-              </svg>
-            </div>
+            <img
+              src={registerIndia}
+              alt="Red Fort representing Indian innovation and responsible AI"
+              className="h-full w-full object-cover"
+            />
           </section>
         </div>
       </div>

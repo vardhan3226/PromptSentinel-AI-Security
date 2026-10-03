@@ -15,6 +15,7 @@ import Background from "../../components/splash/Background";
 import Particles from "../../components/splash/Particles";
 import BootMessages from "../../components/splash/BootMessages";
 import LoadingBar from "../../components/splash/LoadingBar";
+import splashIndia from "../../assets/images/india/splash-india-ai.png";
 
 const messages = [
   "Initializing AI Firewall...",
@@ -74,6 +75,22 @@ function Splash() {
     <div className="relative min-h-screen overflow-hidden bg-[#020817] text-white">
       <Background />
       <Particles />
+
+      {/* =========================================================
+          INDIA LANDMARK VISUAL LAYER
+      ========================================================= */}
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <img
+          src={splashIndia}
+          alt="Indian landmarks and futuristic AI security landscape"
+          className="absolute inset-0 h-full w-full object-cover object-center opacity-[0.34] saturate-[1.12]"
+        />
+
+        {/* Keep the existing real React security UI readable over the artwork. */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(2,8,23,0.42),rgba(2,8,23,0.76)_72%)]" />
+        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#020817]/45 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#020817]/70 via-[#020817]/25 to-transparent" />
+      </div>
 
       {/* =========================================================
           ATMOSPHERE

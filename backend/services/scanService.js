@@ -432,7 +432,8 @@ function buildEvidence({
 
 export const analyzePrompt = async (
   prompt,
-  userId
+  userId,
+  saveScan = true
 ) => {
   const workflow = [];
 
@@ -869,38 +870,43 @@ export const analyzePrompt = async (
   const maskedPrompt =
     maskSensitiveData(prompt);
 
-  const scan =
-    await prisma.promptScan.create({
-      data: {
-        prompt:
-          maskedPrompt,
+  let scan = null;
 
-        attackType:
-          finalAttackType,
+  if (saveScan) {
+    scan =
+      await prisma.promptScan.create({
+        data: {
+          prompt:
+            maskedPrompt,
 
-        threatLevel:
-          fusionResult.threatLevel,
+          attackType:
+            finalAttackType,
 
-        confidence:
-          fusionResult.confidence,
+          threatLevel:
+            fusionResult.threatLevel,
 
-        riskScore:
-          fusionResult.riskScore,
+          confidence:
+            fusionResult.confidence,
 
-        recommendation,
+          riskScore:
+            fusionResult.riskScore,
 
-        userId,
-      },
-    });
+          recommendation,
+
+          userId,
+        },
+      });
+  }
 
   return {
-    id: scan.id,
+    id:
+      scan?.id || null,
 
     prompt:
-      scan.prompt,
+      scan?.prompt || maskedPrompt,
 
     createdAt:
-      scan.createdAt,
+      scan?.createdAt || null,
 
     finalResult: {
       attackType:

@@ -1,4 +1,5 @@
 import { enhancePrompt } from "../services/promptEnhancementService.js";
+import { analyzePrompt } from "../services/scanService.js";
 
 /*
 ============================================================
@@ -7,13 +8,14 @@ PROMPT ENHANCEMENT CONTROLLER
 
 Purpose:
 - Receives a prompt from the frontend.
-- Calls the Prompt Enhancement Engine.
+- Performs backend security analysis first.
+- Blocks high-risk and critical prompts.
+- Enhances only prompts allowed by the security decision.
 - Returns the original and improved prompt.
-- This controller does NOT perform security analysis.
 
 IMPORTANT:
-Security analysis must happen before this controller is
-called from the AI Hub workflow.
+Security analysis is enforced on the backend.
+The frontend must not be trusted to perform this check.
 ============================================================
 */
 
@@ -40,15 +42,79 @@ export const enhancePromptController = async (
       });
     }
 
+    const cleanPrompt =
+      prompt.trim();
+
     /*
     --------------------------------------------------------
-    ENHANCE PROMPT
+    BACKEND SECURITY GATE
     --------------------------------------------------------
     */
 
-    const result = await enhancePrompt(
-      prompt.trim()
-    );
+    const securityResult =
+      await analyzePrompt(
+        cleanPrompt,
+        req.user.id,
+        false
+      );
+
+    const securityDecision =
+      securityResult?.finalResult;
+
+    const securityAction =
+      securityDecision?.action;
+
+    /*
+    --------------------------------------------------------
+    BLOCK HIGH-RISK / CRITICAL PROMPTS
+    --------------------------------------------------------
+    */
+
+    if (
+      securityAction === "BLOCK" ||
+      securityAction === "BLOCK_AND_ALERT"
+    ) {
+      return res.status(403).json({
+        success: false,
+
+        message:
+          "Prompt enhancement blocked by PromptSentinel security analysis.",
+
+        security: {
+          attackType:
+            securityDecision.attackType,
+
+          threatLevel:
+            securityDecision.threatLevel,
+
+          riskScore:
+            securityDecision.riskScore,
+
+          confidence:
+            securityDecision.confidence,
+
+          action:
+            securityDecision.action,
+
+          actionMessage:
+            securityDecision.actionMessage,
+
+          recommendation:
+            securityDecision.recommendation,
+        },
+      });
+    }
+
+    /*
+    --------------------------------------------------------
+    ENHANCE ONLY AFTER SECURITY APPROVAL
+    --------------------------------------------------------
+    */
+
+    const result =
+      await enhancePrompt(
+        cleanPrompt
+      );
 
     /*
     --------------------------------------------------------
@@ -58,6 +124,20 @@ export const enhancePromptController = async (
 
     return res.status(200).json({
       success: true,
+
+      security: {
+        threatLevel:
+          securityDecision.threatLevel,
+
+        riskScore:
+          securityDecision.riskScore,
+
+        confidence:
+          securityDecision.confidence,
+
+        action:
+          securityDecision.action,
+      },
 
       enhancement: {
         originalPrompt:

@@ -4,6 +4,7 @@ import crypto from "crypto";
 
 import prisma from "../lib/prisma.js";
 import { sendVerificationEmail } from "./emailService.js";
+import { firebaseAuth } from "../config/firebaseAdmin.js";
 
 const FRONTEND_URL =
   process.env.FRONTEND_URL || "http://localhost:5173";
@@ -113,6 +114,207 @@ export const registerUser = async ({
   };
 };
 
+/*
+ * Firebase registration
+ *
+ * Firebase is responsible for:
+ * - Password authentication
+ * - Email verification
+ *
+ * Prisma remains responsible for:
+ * - Application user record
+ * - Existing user ID
+ * - Role
+ * - Prompt scans
+ * - AI conversations
+ *
+ * The password field is retained in Prisma for legacy
+ * compatibility. A random bcrypt hash is stored because
+ * Firebase is the actual authentication authority for
+ * Firebase-created accounts.
+ */
+export const registerFirebaseUser = async ({
+  fullName,
+  email,
+  idToken,
+}) => {
+  if (!idToken) {
+    throw new Error(
+      "Firebase authentication token is required."
+    );
+  }
+
+  if (!fullName || fullName.trim().length < 3) {
+    throw new Error(
+      "Full name must be at least 3 characters."
+    );
+  }
+
+  if (!email) {
+    throw new Error("Email address is required.");
+  }
+
+  let decodedToken;
+
+  try {
+    decodedToken =
+      await firebaseAuth.verifyIdToken(idToken);
+  } catch (error) {
+    console.error(
+      "Firebase registration token verification error:",
+      error
+    );
+
+    throw new Error(
+      "Invalid Firebase authentication token."
+    );
+  }
+
+  const firebaseUid = decodedToken.uid;
+
+  const firebaseEmail =
+    decodedToken.email?.trim().toLowerCase();
+
+  const submittedEmail =
+    String(email).trim().toLowerCase();
+
+  if (!firebaseUid || !firebaseEmail) {
+    throw new Error(
+      "Firebase account information is incomplete."
+    );
+  }
+
+  /*
+   * The email submitted by the frontend must match
+   * the email authenticated by Firebase.
+   */
+  if (firebaseEmail !== submittedEmail) {
+    throw new Error(
+      "Firebase account email does not match the registered email address."
+    );
+  }
+
+  /*
+   * At initial registration, Firebase email verification
+   * has normally not happened yet.
+   *
+   * Therefore, DO NOT require email_verified === true here.
+   *
+   * Firebase will send the verification email. The login
+   * flow will verify the Firebase emailVerified state before
+   * allowing access.
+   */
+  const emailVerified =
+    decodedToken.email_verified === true;
+
+  const existingFirebaseUser =
+    await prisma.user.findUnique({
+      where: {
+        firebaseUid,
+      },
+    });
+
+  if (existingFirebaseUser) {
+    throw new Error(
+      "Firebase account is already registered."
+    );
+  }
+
+  const existingEmailUser =
+    await prisma.user.findUnique({
+      where: {
+        email: firebaseEmail,
+      },
+    });
+
+  if (existingEmailUser) {
+    throw new Error(
+      "Email is already registered."
+    );
+  }
+
+  /*
+   * Prisma currently requires the password field.
+   *
+   * Firebase is the real password authority for this
+   * account. This random bcrypt hash exists only for
+   * legacy database compatibility.
+   */
+  const compatibilityPassword =
+    await bcrypt.hash(
+      crypto.randomBytes(32).toString("hex"),
+      10
+    );
+
+  let user;
+
+  try {
+    user = await prisma.user.create({
+      data: {
+        fullName: fullName.trim(),
+        email: firebaseEmail,
+        firebaseUid,
+        password: compatibilityPassword,
+
+        emailVerified,
+
+        /*
+         * Firebase handles email verification for
+         * Firebase-created accounts, so the old
+         * application verification-token fields are
+         * not used for this registration path.
+         */
+        verificationTokenHash: null,
+        verificationTokenExpiry: null,
+      },
+    });
+  } catch (error) {
+    /*
+     * The Firebase account was created by the frontend
+     * immediately before this backend registration call.
+     *
+     * If the Prisma record cannot be created, remove the
+     * newly-created Firebase account so the user is not
+     * left with an orphaned Firebase account.
+     */
+    try {
+      await firebaseAuth.deleteUser(firebaseUid);
+    } catch (cleanupError) {
+      console.error(
+        "Firebase registration cleanup error:",
+        cleanupError
+      );
+    }
+
+    console.error(
+      "Firebase Prisma user creation error:",
+      error
+    );
+
+    throw new Error(
+      "Unable to create the PromptSentinel account."
+    );
+  }
+
+  return {
+    message: emailVerified
+      ? "Registration successful. Your email has been verified through Firebase."
+      : "Registration successful. Please check your email and verify your account before logging in.",
+
+    requiresEmailVerification:
+      !emailVerified,
+
+    user: {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      emailVerified: user.emailVerified,
+      firebaseUid: user.firebaseUid,
+    },
+  };
+};
+
 export const resendVerificationEmail = async ({
   email,
 }) => {
@@ -180,6 +382,168 @@ export const resendVerificationEmail = async ({
   };
 };
 
+/*
+ * Firebase login
+ *
+ * The frontend authenticates the user's email and
+ * password directly with Firebase.
+ *
+ * The resulting Firebase ID token is sent here.
+ *
+ * Firebase Admin verifies the token and retrieves the
+ * authoritative Firebase user record.
+ *
+ * Prisma is then used to locate the corresponding
+ * PromptSentinel application user.
+ */
+export const loginFirebaseUser = async ({
+  idToken,
+}) => {
+  if (!idToken) {
+    throw new Error(
+      "Firebase authentication token is required."
+    );
+  }
+
+  let decodedToken;
+
+  try {
+    decodedToken =
+      await firebaseAuth.verifyIdToken(idToken);
+  } catch (error) {
+    console.error(
+      "Firebase login token verification error:",
+      error
+    );
+
+    throw new Error(
+      "Invalid or expired Firebase authentication token."
+    );
+  }
+
+  const firebaseUid = decodedToken.uid;
+
+  if (!firebaseUid) {
+    throw new Error(
+      "Firebase account information is incomplete."
+    );
+  }
+
+  /*
+   * Get the authoritative Firebase user record.
+   *
+   * This avoids relying only on a potentially stale
+   * email_verified claim from the ID token.
+   */
+  let firebaseUser;
+
+  try {
+    firebaseUser =
+      await firebaseAuth.getUser(firebaseUid);
+  } catch (error) {
+    console.error(
+      "Firebase user lookup error:",
+      error
+    );
+
+    throw new Error(
+      "Unable to verify the Firebase account."
+    );
+  }
+
+  if (!firebaseUser.email) {
+    throw new Error(
+      "Firebase account email is unavailable."
+    );
+  }
+
+  const firebaseEmail =
+    firebaseUser.email.trim().toLowerCase();
+
+  /*
+   * Email verification is mandatory before application
+   * access is granted.
+   */
+  if (!firebaseUser.emailVerified) {
+    throw new Error(
+      "Please verify your email address before logging in."
+    );
+  }
+
+  /*
+   * Firebase-created accounts must already have a
+   * corresponding PromptSentinel user record.
+   */
+  let user = await prisma.user.findUnique({
+    where: {
+      firebaseUid,
+    },
+  });
+
+  /*
+   * Do not silently create a new application account
+   * during login.
+   */
+  if (!user) {
+    throw new Error(
+      "PromptSentinel account not found. Please complete registration first."
+    );
+  }
+
+  /*
+   * Confirm the Firebase email still matches the
+   * PromptSentinel account.
+   */
+  if (
+    user.email.trim().toLowerCase() !==
+    firebaseEmail
+  ) {
+    throw new Error(
+      "Firebase account email does not match the PromptSentinel account."
+    );
+  }
+
+  /*
+   * Synchronize Firebase verification state with Prisma.
+   */
+  if (!user.emailVerified) {
+    user = await prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        emailVerified: true,
+      },
+    });
+  }
+
+  return {
+    message: "Login successful.",
+
+    /*
+     * The Firebase ID token becomes the authenticated
+     * token used by the frontend for protected API calls.
+     */
+    token: idToken,
+
+    authProvider: "firebase",
+
+    user: {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      emailVerified: user.emailVerified,
+      firebaseUid: user.firebaseUid,
+    },
+  };
+};
+
+/*
+ * Legacy JWT login
+ *
+ * Kept temporarily during the Firebase migration.
+ */
 export const loginUser = async ({
   email,
   password,

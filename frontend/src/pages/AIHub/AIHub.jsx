@@ -3,12 +3,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
-  Bot,
   Sparkles,
   Zap,
   Check,
   ShieldCheck,
   Lightbulb,
+  History,
+  Trash2,
 } from "lucide-react";
 
 import Sidebar from "../../components/Sidebar";
@@ -27,11 +28,6 @@ function AIHub() {
 
   const [conversation, setConversation] = useState([]);
   const [conversationId, setConversationId] = useState(null);
-
-  // Step 7C: saved AI conversation history
-  const [conversationHistory, setConversationHistory] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyError, setHistoryError] = useState("");
 
   const getContextualSuggestions = (currentPrompt) => {
     const text = currentPrompt.trim().toLowerCase();
@@ -200,76 +196,78 @@ function AIHub() {
     }
   }, [token, navigate]);
 
-  // Step 7C: load saved conversations for the authenticated user.
-  useEffect(() => {
-    if (!token) return;
-
-    const loadConversationHistory = async () => {
-      try {
-        setHistoryLoading(true);
-        setHistoryError("");
-
-        const response = await fetch(
-          `${API_BASE_URL}/api/ai/conversations`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (response.status === 401 || response.status === 403) {
-          localStorage.removeItem("token");
-          navigate("/login");
-          return;
-        }
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data?.message ||
-              "Unable to load conversation history."
-          );
-        }
-
-        if (!data.success) {
-          throw new Error(
-            data?.message ||
-              "Unable to load conversation history."
-          );
-        }
-
-        setConversationHistory(
-          Array.isArray(data.conversations)
-            ? data.conversations
-            : []
-        );
-      } catch (error) {
-        console.error(
-          "Conversation history load error:",
-          error
-        );
-
-        setHistoryError(
-          error.message ||
-            "Unable to load conversation history."
-        );
-      } finally {
-        setHistoryLoading(false);
-      }
-    };
-
-    loadConversationHistory();
-  }, [token, navigate]);
-
   useEffect(() => {
     const incomingPrompt = location.state?.prompt;
     const incomingSecurityResult =
       location.state?.securityResult;
+    const savedConversation =
+      location.state?.savedConversation;
 
     const timer = setTimeout(() => {
+      if (savedConversation?.id) {
+        const savedMessages = Array.isArray(
+          savedConversation.messages
+        )
+          ? savedConversation.messages
+          : [];
+
+        const restoredConversation = savedMessages
+          .map((message) => ({
+            role:
+              message.role === "USER"
+                ? "user"
+                : message.role === "ASSISTANT"
+                ? "assistant"
+                : String(message.role || "").toLowerCase(),
+            content: message.content || "",
+          }))
+          .filter(
+            (message) =>
+              (message.role === "user" ||
+                message.role === "assistant") &&
+              message.content
+          );
+
+        setConversationId(savedConversation.id);
+        setConversation(restoredConversation);
+        setPrompt("");
+        setSecurityResult(null);
+        setError("");
+
+        const lastAssistantMessage = [...restoredConversation]
+          .reverse()
+          .find(
+            (message) => message.role === "assistant"
+          );
+
+        if (lastAssistantMessage) {
+          const lastSavedAssistantMessage = [...savedMessages]
+            .reverse()
+            .find(
+              (message) =>
+                message.role === "ASSISTANT" &&
+                message.content === lastAssistantMessage.content
+            );
+
+          setAiResult({
+            provider:
+              lastSavedAssistantMessage?.provider || "Groq",
+            response: lastAssistantMessage.content,
+            responseStyle:
+              lastSavedAssistantMessage?.responseStyle ||
+              "default",
+          });
+        } else {
+          setAiResult(null);
+        }
+
+        navigate("/ai-hub", {
+          replace: true,
+          state: null,
+        });
+        return;
+      }
+
       if (
         typeof incomingPrompt === "string" &&
         incomingPrompt.trim()
@@ -287,7 +285,14 @@ function AIHub() {
     }, 0);
 
     return () => clearTimeout(timer);
-  }, [location.state]);
+  }, [location.state, navigate]);
+
+  const handleClearPrompt = () => {
+    if (loading) return;
+
+    setPrompt("");
+    setError("");
+  };
 
   const handleSend = async () => {
     const trimmedPrompt = prompt.trim();
@@ -387,75 +392,6 @@ function AIHub() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleOpenConversation = (savedConversation) => {
-    if (loading || !savedConversation?.id) return;
-
-    const savedMessages = Array.isArray(
-      savedConversation.messages
-    )
-      ? savedConversation.messages
-      : [];
-
-    const restoredConversation = savedMessages
-      .map((message) => ({
-        role:
-          message.role === "USER"
-            ? "user"
-            : message.role === "ASSISTANT"
-            ? "assistant"
-            : String(message.role || "").toLowerCase(),
-        content: message.content || "",
-      }))
-      .filter(
-        (message) =>
-          (message.role === "user" ||
-            message.role === "assistant") &&
-          message.content
-      );
-
-    setConversationId(savedConversation.id);
-    setConversation(restoredConversation);
-    setPrompt("");
-    setSecurityResult(null);
-    setError("");
-
-    const lastAssistantMessage = [...restoredConversation]
-      .reverse()
-      .find(
-        (message) => message.role === "assistant"
-      );
-
-    if (lastAssistantMessage) {
-      const lastSavedAssistantMessage = [...savedMessages]
-        .reverse()
-        .find(
-          (message) =>
-            message.role === "ASSISTANT" &&
-            message.content === lastAssistantMessage.content
-        );
-
-      setAiResult({
-        provider:
-          lastSavedAssistantMessage?.provider || "Groq",
-        response: lastAssistantMessage.content,
-        responseStyle:
-          lastSavedAssistantMessage?.responseStyle ||
-          "default",
-      });
-    } else {
-      setAiResult(null);
-    }
-
-    setTimeout(() => {
-      document
-        .getElementById("active-conversation")
-        ?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-    }, 0);
   };
 
   const handleNewConversation = () => {
@@ -818,149 +754,6 @@ function AIHub() {
           </section>
 
           <section className="mb-5 rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Bot
-                    size={18}
-                    className="text-cyan-500"
-                  />
-
-                  <h2 className="text-lg font-bold text-[#102a63]">
-                    Conversation History
-                  </h2>
-                </div>
-
-                <p className="mt-0.5 text-xs text-slate-400">
-                  Your saved AI conversations are stored securely in PromptSentinel.
-                </p>
-              </div>
-
-              <div className="mt-2 w-fit rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1.5 sm:mt-0">
-                <span className="text-[10px] font-bold uppercase tracking-wide text-cyan-700">
-                  {conversationHistory.length}{" "}
-                  {conversationHistory.length === 1
-                    ? "conversation"
-                    : "conversations"}
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              {historyLoading && (
-                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-4">
-                  <p className="text-xs font-medium text-slate-500">
-                    Loading conversation history...
-                  </p>
-                </div>
-              )}
-
-              {!historyLoading && historyError && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4">
-                  <p className="text-xs font-medium text-red-700">
-                    {historyError}
-                  </p>
-                </div>
-              )}
-
-              {!historyLoading &&
-                !historyError &&
-                conversationHistory.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center">
-                    <p className="text-sm font-semibold text-slate-600">
-                      No saved conversations yet.
-                    </p>
-
-                    <p className="mt-1 text-xs leading-5 text-slate-400">
-                      Your conversations will appear here after you use the AI Hub.
-                    </p>
-                  </div>
-                )}
-
-              {!historyLoading &&
-                !historyError &&
-                conversationHistory.length > 0 && (
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    {conversationHistory.map((savedConversation) => {
-                      const messageCount =
-                        Array.isArray(savedConversation.messages)
-                          ? savedConversation.messages.length
-                          : 0;
-
-                      const turnCount = Math.ceil(
-                        messageCount / 2
-                      );
-
-                      return (
-                        <div
-                          key={savedConversation.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() =>
-                            handleOpenConversation(
-                              savedConversation
-                            )
-                          }
-                          onKeyDown={(event) => {
-                            if (
-                              event.key === "Enter" ||
-                              event.key === " "
-                            ) {
-                              event.preventDefault();
-                              handleOpenConversation(
-                                savedConversation
-                              );
-                            }
-                          }}
-                          className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-cyan-300 hover:bg-cyan-50/40 hover:shadow-sm focus:border-cyan-300 focus:outline-none focus:ring-4 focus:ring-cyan-100"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-bold text-[#102a63]">
-                                {savedConversation.title ||
-                                  "Untitled Conversation"}
-                              </p>
-
-                              <p className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-cyan-600">
-                                Tap to open conversation
-                              </p>
-
-                              <p className="mt-1 text-[10px] text-slate-400">
-                                {turnCount}{" "}
-                                {turnCount === 1
-                                  ? "turn"
-                                  : "turns"}{" "}
-                                · {messageCount}{" "}
-                                {messageCount === 1
-                                  ? "message"
-                                  : "messages"}
-                              </p>
-                            </div>
-
-                            <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-emerald-600">
-                              Saved
-                            </span>
-                          </div>
-
-                          <div className="mt-3 flex items-center justify-between gap-3">
-                            <p className="text-[10px] text-slate-400">
-                              Updated{" "}
-                              {savedConversation.updatedAt
-                                ? new Date(
-                                    savedConversation.updatedAt
-                                  ).toLocaleString()
-                                : "recently"}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-            </div>
-          </section>
-
-          <section className="mb-5 rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-lg font-bold text-[#102a63]">
@@ -973,17 +766,25 @@ function AIHub() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                {conversation.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleNewConversation}
-                    disabled={loading}
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    New Chat
-                  </button>
-                )}
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate("/ai-hub/history")}
+                  disabled={loading}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <History size={13} />
+                  History
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleNewConversation}
+                  disabled={loading}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  New Chat
+                </button>
 
                 <div className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5">
                   <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-600">
@@ -1087,33 +888,49 @@ function AIHub() {
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={
-                  loading ||
-                  !prompt.trim()
-                }
-                className="
-                  rounded-xl
-                  bg-[#102a63]
-                  px-6
-                  py-3
-                  text-sm
-                  font-bold
-                  text-white
-                  shadow-lg
-                  shadow-blue-900/10
-                  transition
-                  hover:bg-[#0b2152]
-                  disabled:cursor-not-allowed
-                  disabled:opacity-50
-                "
-              >
-                {loading
-                  ? "Scanning & Processing..."
-                  : "Scan & Send"}
-              </button>
+              <div className="flex items-center justify-end gap-2">
+                {prompt.trim() && (
+                  <button
+                    type="button"
+                    onClick={handleClearPrompt}
+                    disabled={loading}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    title="Clear prompt"
+                    aria-label="Clear prompt"
+                  >
+                    <Trash2 size={14} />
+                    Clear
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleSend}
+                  disabled={
+                    loading ||
+                    !prompt.trim()
+                  }
+                  className="
+                    rounded-xl
+                    bg-[#102a63]
+                    px-6
+                    py-3
+                    text-sm
+                    font-bold
+                    text-white
+                    shadow-lg
+                    shadow-blue-900/10
+                    transition
+                    hover:bg-[#0b2152]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
+                  "
+                >
+                  {loading
+                    ? "Scanning & Processing..."
+                    : "Scan & Send"}
+                </button>
+              </div>
             </div>
 
             {error && (

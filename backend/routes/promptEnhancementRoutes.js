@@ -11,29 +11,28 @@ const router = express.Router();
 PROMPT ENHANCEMENT ROUTE
 ============================================================
 
-Full endpoint:
-
-POST /api/prompt/enhance
+POST /api/ai/enhance
 
 Flow:
 
-Prompt Scanner
-      ↓
-Security Analysis
-      ↓
-Allowed Prompt
-      ↓
-/api/prompt/enhance
-      ↓
+Prompt
+  ↓
 Authentication
-      ↓
+  ↓
 Prompt Enhancement Controller
-      ↓
-Prompt Enhancement Service
-      ↓
+  ↓
+Backend Security Analysis
+  ↓
+Security Decision
+  ↓
+Allowed → Prompt Enhancement Service
+  ↓
 Groq
-      ↓
+  ↓
 Improved Prompt
+
+High-risk and critical prompts are blocked by the
+backend controller before enhancement.
 ============================================================
 */
 
