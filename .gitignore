@@ -31,3 +31,5 @@ yarn-error.log*
 # Prisma
 backend/prisma/*.db
 backend/prisma/*.db-journal
+# Unrelated local OneDrive reparse object
+tall nodemailer

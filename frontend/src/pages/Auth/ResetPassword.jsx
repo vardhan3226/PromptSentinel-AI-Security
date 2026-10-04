@@ -7,17 +7,21 @@ import {
   EyeOff,
   ArrowLeft,
 } from "lucide-react";
-import API_BASE_URL from "../../config/api";
+import {
+  confirmPasswordReset,
+  verifyPasswordResetCode,
+} from "firebase/auth";
+import { auth } from "../../config/firebase";
 
 function ResetPassword() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const token = searchParams.get("token");
-  const email = searchParams.get("email");
+  const oobCode = searchParams.get("oobCode");
 
   const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] =
+    useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] =
@@ -33,7 +37,7 @@ function ResetPassword() {
     setMessage("");
     setError("");
 
-    if (!token || !email) {
+    if (!oobCode) {
       setError(
         "This password reset link is invalid or incomplete."
       );
@@ -60,33 +64,18 @@ function ResetPassword() {
     try {
       setLoading(true);
 
-      const response = await fetch(
-        `${API_BASE_URL}/api/auth/reset-password`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email,
-            token,
-            newPassword,
-          }),
-        }
+      // Verify that the Firebase reset code is still valid.
+      await verifyPasswordResetCode(auth, oobCode);
+
+      // Change the Firebase user's password.
+      await confirmPasswordReset(
+        auth,
+        oobCode,
+        newPassword
       );
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message ||
-            "Unable to reset your password."
-        );
-      }
-
       setMessage(
-        data.message ||
-          "Password reset successfully."
+        "Password reset successfully."
       );
 
       setNewPassword("");
@@ -96,10 +85,41 @@ function ResetPassword() {
         navigate("/login");
       }, 2000);
     } catch (err) {
-      setError(
-        err.message ||
-          "Unable to reset your password."
+      console.error(
+        "Firebase password reset confirmation error:",
+        err
       );
+
+      switch (err?.code) {
+        case "auth/expired-action-code":
+          setError(
+            "This password reset link has expired. Please request a new one."
+          );
+          break;
+
+        case "auth/invalid-action-code":
+          setError(
+            "This password reset link is invalid or has already been used."
+          );
+          break;
+
+        case "auth/weak-password":
+          setError(
+            "Password is too weak. Please choose a stronger password."
+          );
+          break;
+
+        case "auth/user-disabled":
+          setError(
+            "This account has been disabled."
+          );
+          break;
+
+        default:
+          setError(
+            "Unable to reset your password. Please request a new reset link and try again."
+          );
+      }
     } finally {
       setLoading(false);
     }

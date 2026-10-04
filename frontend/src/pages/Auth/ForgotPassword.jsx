@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Mail, ArrowLeft, ShieldCheck } from "lucide-react";
-import API_BASE_URL from "../../config/api";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { auth } from "../../config/firebase";
 
 function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -15,7 +16,9 @@ function ForgotPassword() {
     setMessage("");
     setError("");
 
-    if (!email.trim()) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
       setError("Please enter your email address.");
       return;
     }
@@ -23,37 +26,29 @@ function ForgotPassword() {
     try {
       setLoading(true);
 
-      const response = await fetch(
-        `${API_BASE_URL}/api/auth/forgot-password`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: email.trim().toLowerCase(),
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message ||
-            "Unable to process your password reset request."
-        );
-      }
+      await sendPasswordResetEmail(auth, normalizedEmail);
 
       setMessage(
-        data.message ||
-          "If an account exists with this email, a password reset email has been sent."
+        "If an account exists with this email, a password reset email has been sent."
       );
     } catch (err) {
-      setError(
-        err.message ||
-          "Unable to process your password reset request."
-      );
+      console.error("Firebase password reset error:", err);
+
+      if (err?.code === "auth/invalid-email") {
+        setError("Please enter a valid email address.");
+      } else if (err?.code === "auth/too-many-requests") {
+        setError(
+          "Too many password reset requests. Please try again later."
+        );
+      } else {
+        /*
+         * Keep the response generic so the UI does not
+         * reveal whether an email is registered.
+         */
+        setMessage(
+          "If an account exists with this email, a password reset email has been sent."
+        );
+      }
     } finally {
       setLoading(false);
     }

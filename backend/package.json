@@ -21,7 +21,6 @@
     "express-rate-limit": "^8.7.0",
     "firebase-admin": "^14.5.0",
     "jsonwebtoken": "^9.0.3",
-    "nodemailer": "^10.0.10",
     "pg": "^8.23.0",
     "resend": "^6.28.1",
     "validator": "^13.15.35"
